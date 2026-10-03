@@ -23,11 +23,5 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ],
-  "env": {
-    "GEMINI_API_KEY": "@gemini_api_key",
-    "DATABASE_URL": "@database_url",
-    "SEARCH_API_KEY": "@search_api_key",
-    "ALLOWED_ORIGIN": "@allowed_origin"
-  }
+  ]
 }
