@@ -1,14 +1,16 @@
 import sys
 import asyncio
 import streamlit as st
-import time
+import os
+import uuid
 
 # Ensure the backend directory is in the path
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 
-from llm.gemini import GeminiProvider
-from agents.orchestrator import ResearchOrchestrator, OrchestratorRequest
+from agents.requirement import RequirementAgent
+from agents.orchestrator import run_pipeline
+from llm.gemini import GeminiProvider, MockLLMProvider
 
 st.set_page_config(page_title="BuyWise AI", page_icon="🛍️", layout="wide")
 
@@ -37,52 +39,71 @@ query = st.text_input(
     placeholder="e.g., I need a laptop under $1,000 for cybersecurity. I use Linux and run multiple VMs. I want at least 32GB RAM."
 )
 
-# Async wrapper for orchestrator
-async def run_orchestrator(prompt: str, api_key: str):
-    llm = GeminiProvider(api_key=api_key) if api_key else None
-    orchestrator = ResearchOrchestrator(llm=llm)
-    req = OrchestratorRequest(text=prompt)
+async def _do_research(prompt: str, api_key: str):
+    # Set environment variable so get_llm_provider() in orchestrator.py picks it up
+    if api_key:
+        os.environ["GEMINI_API_KEY"] = api_key
+    elif "GEMINI_API_KEY" in os.environ:
+        del os.environ["GEMINI_API_KEY"]
+
+    llm = GeminiProvider(api_key=api_key) if api_key else MockLLMProvider()
     
-    # We will use st.status to show progress
-    with st.status("🧠 AI Agents are researching...", expanded=True) as status:
-        async for state in orchestrator.run(req):
-            if state.progress_logs:
-                # Get the latest log
-                latest_log = state.progress_logs[-1]
-                st.write(f"✅ {latest_log.message}")
+    with st.status("🧠 Understanding requirements...", expanded=True) as status:
+        req_agent = RequirementAgent(llm=llm)
+        try:
+            req_res = await req_agent.run(prompt)
+        except Exception:
+            # Fallback to mock if LLM fails (e.g. no key)
+            from agents.requirement import _DEMO_REQUIREMENTS
+            from models.request import RequirementAnalysisResponse
+            req_res = RequirementAnalysisResponse(
+                category="laptop",
+                requirements=_DEMO_REQUIREMENTS,
+                request_id=str(uuid.uuid4())
+            )
+            
+        st.write("✅ Requirements Extracted")
+        
+        # This callback receives the SSE dictionary
+        async def on_progress(event):
+            st.write(f"✅ {event['message']}")
+            
+        status.update(label="🔍 Researching products...", state="running")
+        
+        comparison = await run_pipeline(
+            request_id=req_res.request_id,
+            requirements=req_res.requirements,
+            raw_text=prompt,
+            progress_callback=on_progress
+        )
         
         status.update(label="Research Complete!", state="complete", expanded=False)
-    
-    return state
+        
+    return req_res, comparison
 
 if st.button("Search", type="primary") and query:
-    # Run the asyncio event loop
-    state = asyncio.run(run_orchestrator(query, st.session_state.gemini_api_key))
-    
-    # --- Display Results ---
-    if state.error:
-        st.error(f"An error occurred: {state.error}")
-    else:
-        st.success(f"Found {len(state.results)} perfect matches for you!")
+    try:
+        req_res, comparison = asyncio.run(_do_research(query, st.session_state.gemini_api_key))
         
-        # Display Requirements
+        st.success(f"Found {len(comparison.products)} perfect matches for you!")
+        
         with st.expander("📝 Extracted Requirements"):
-            for req in state.requirements:
+            for req in req_res.requirements:
                 st.write(f"- **{req.key.title()}**: {req.operator} {req.value} *(Priority: {req.priority.value})*")
         
         st.divider()
         
-        # Display Products in Columns
-        if state.results:
-            cols = st.columns(len(state.results))
-            for i, result in enumerate(state.results):
+        if comparison.products:
+            cols = st.columns(len(comparison.products))
+            for i, result in enumerate(comparison.products):
                 with cols[i]:
                     st.subheader(result.product.name)
                     st.write(f"**Score:** {result.score_out_of_10}/10")
                     
                     st.write("### Specs")
                     for k, v in result.product.specs.items():
-                        st.write(f"- **{k.replace('_', ' ').title()}**: {v}")
+                        if v:
+                            st.write(f"- **{k.replace('_', ' ').title()}**: {v}")
                     
                     st.write("### AI Analysis")
                     st.info(result.summary)
@@ -94,3 +115,5 @@ if st.button("Search", type="primary") and query:
                         st.write(f"❌ {con}")
         else:
             st.warning("No products found matching those strict requirements.")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
