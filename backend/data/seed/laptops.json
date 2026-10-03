@@ -1,0 +1,632 @@
+[
+  {
+    "id": "lenovo-thinkpad-x1-carbon-gen12",
+    "name": "ThinkPad X1 Carbon Gen 12",
+    "brand": "Lenovo",
+    "category": "laptop",
+    "model_number": "21KC001KUS",
+    "canonical_url": "https://www.lenovo.com/us/en/p/laptops/thinkpad/thinkpadx1/thinkpad-x1-carbon-gen-12/len101t0088",
+    "specs": {
+      "cpu": "Intel Core Ultra 7 165U",
+      "gpu": "Intel Arc Graphics",
+      "ram_gb": 32,
+      "ram_type": "LPDDR5X",
+      "ram_upgradeable": false,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "2880x1800",
+      "display_hz": 90,
+      "battery_wh": 57,
+      "weight_lbs": 2.48,
+      "os": "Windows 11 Pro",
+      "linux_support": "strong",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "2x Thunderbolt 4, 2x USB-A, HDMI 2.1, SD slot, headphone jack",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Price varies by configuration — check current retailer listing [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "Depot repair",
+    "source_urls": [
+      {
+        "url": "https://www.lenovo.com/us/en/p/laptops/thinkpad/thinkpadx1/thinkpad-x1-carbon-gen-12/len101t0088",
+        "source_type": "primary",
+        "title": "Lenovo ThinkPad X1 Carbon Gen 12 official product page"
+      },
+      {
+        "url": "https://psref.lenovo.com/Product/ThinkPad/ThinkPad_X1_Carbon_Gen_12",
+        "source_type": "primary",
+        "title": "Lenovo PSREF specification sheet"
+      }
+    ],
+    "notes": "RAM is soldered (not upgradeable). Excellent Linux support via community reports."
+  },
+  {
+    "id": "framework-laptop-16",
+    "name": "Framework Laptop 16",
+    "brand": "Framework",
+    "category": "laptop",
+    "model_number": "FW-16-AMD-7940HX",
+    "canonical_url": "https://frame.work/products/laptop16-diy-amd-7040",
+    "specs": {
+      "cpu": "AMD Ryzen 9 7940HX",
+      "gpu": "AMD Radeon RX 7700S (optional module)",
+      "ram_gb": null,
+      "ram_note": "User-configured; supports up to 96GB DDR5 SO-DIMM",
+      "ram_upgradeable": true,
+      "storage_gb": null,
+      "storage_note": "User-configured; M.2 2280 NVMe",
+      "storage_slots": 1,
+      "display_size_in": 16.0,
+      "display_resolution": "2560x1600",
+      "display_hz": 165,
+      "battery_wh": 85,
+      "weight_lbs": 4.63,
+      "os": "No OS (DIY) or Windows 11 Home",
+      "linux_support": "strong",
+      "virtualization": "AMD-V (SVM) supported",
+      "ports": "Modular — user-configurable; USB-A, USB-C, HDMI, DisplayPort, SD available as modules",
+      "wifi": "Wi-Fi 6E (AX210)",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Base configuration price varies; check framework.com for current pricing [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "Limited",
+    "source_urls": [
+      {
+        "url": "https://frame.work/products/laptop16-diy-amd-7040",
+        "source_type": "primary",
+        "title": "Framework Laptop 16 official product page"
+      },
+      {
+        "url": "https://guides.frame.work/c/Framework_Laptop_16",
+        "source_type": "primary",
+        "title": "Framework repair/upgrade guides"
+      }
+    ],
+    "notes": "Highly modular and upgradeable. Strong Linux community support. GPU module adds cost."
+  },
+  {
+    "id": "system76-lemur-pro",
+    "name": "Lemur Pro",
+    "brand": "System76",
+    "category": "laptop",
+    "model_number": "lemp12",
+    "canonical_url": "https://system76.com/laptops/lemur",
+    "specs": {
+      "cpu": "Intel Core i7-1365U",
+      "gpu": "Intel Iris Xe Graphics",
+      "ram_gb": 48,
+      "ram_type": "LPDDR5",
+      "ram_upgradeable": false,
+      "storage_gb": null,
+      "storage_note": "Configurable; M.2 NVMe",
+      "storage_slots": 2,
+      "display_size_in": 14.0,
+      "display_resolution": "1920x1080",
+      "display_hz": 60,
+      "battery_wh": 73,
+      "weight_lbs": 2.4,
+      "os": "Ubuntu (Pop!_OS) — Linux native",
+      "linux_support": "native",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "2x USB-A, USB-C (Thunderbolt 4), HDMI, headphone jack",
+      "wifi": "Wi-Fi 6",
+      "bluetooth": "5.2"
+    },
+    "price_usd": null,
+    "price_note": "Starts around $999 for base config; check system76.com [VERIFY current pricing]",
+    "warranty_months": 12,
+    "warranty_coverage": "Lifetime phone support; 1-year hardware warranty",
+    "source_urls": [
+      {
+        "url": "https://system76.com/laptops/lemur",
+        "source_type": "primary",
+        "title": "System76 Lemur Pro official page"
+      }
+    ],
+    "notes": "Ships with Linux (Pop!_OS or Ubuntu). Very lightweight. RAM soldered."
+  },
+  {
+    "id": "dell-xps-15-9530",
+    "name": "XPS 15 9530",
+    "brand": "Dell",
+    "category": "laptop",
+    "model_number": "XPS9530-9370BLK-PUS",
+    "canonical_url": "https://www.dell.com/en-us/shop/laptops/xps-15/spd/xps-15-9530-laptop",
+    "specs": {
+      "cpu": "Intel Core i7-13700H",
+      "gpu": "NVIDIA GeForce RTX 4060",
+      "ram_gb": 32,
+      "ram_type": "DDR5",
+      "ram_upgradeable": true,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 15.6,
+      "display_resolution": "3456x2160",
+      "display_hz": 60,
+      "battery_wh": 86,
+      "weight_lbs": 4.22,
+      "os": "Windows 11 Home",
+      "linux_support": "partial",
+      "virtualization": "VT-x, VT-d (verify BIOS settings)",
+      "ports": "2x Thunderbolt 4, USB-A, SD slot, 3.5mm jack",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Pricing varies; check Dell.com or authorized retailers [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "Basic hardware warranty",
+    "source_urls": [
+      {
+        "url": "https://www.dell.com/en-us/shop/laptops/xps-15/spd/xps-15-9530-laptop",
+        "source_type": "primary",
+        "title": "Dell XPS 15 9530 official product page"
+      }
+    ],
+    "notes": "Linux support is partial — some drivers require manual setup. NVIDIA Optimus can complicate Linux."
+  },
+  {
+    "id": "hp-dev-one",
+    "name": "Dev One",
+    "brand": "HP",
+    "category": "laptop",
+    "model_number": "HP-DEV-ONE",
+    "canonical_url": "https://hpdevone.com",
+    "specs": {
+      "cpu": "AMD Ryzen 7 PRO 5850U",
+      "gpu": "AMD Radeon Graphics",
+      "ram_gb": 16,
+      "ram_type": "DDR4",
+      "ram_upgradeable": true,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "1920x1080",
+      "display_hz": 60,
+      "battery_wh": 53,
+      "weight_lbs": 3.24,
+      "os": "Ubuntu (Pop!_OS) — Linux native",
+      "linux_support": "native",
+      "virtualization": "AMD-V (SVM) supported",
+      "ports": "2x USB-A, USB-C (Thunderbolt 4), HDMI, SD slot, headphone jack",
+      "wifi": "Wi-Fi 6",
+      "bluetooth": "5.2"
+    },
+    "price_usd": null,
+    "price_note": "Availability may be limited; check current status [VERIFY availability]",
+    "warranty_months": 12,
+    "warranty_coverage": "Limited",
+    "source_urls": [
+      {
+        "url": "https://hpdevone.com",
+        "source_type": "primary",
+        "title": "HP Dev One official page"
+      }
+    ],
+    "notes": "Ships with Linux. Base config is 16GB — may not meet 32GB requirement without upgrade."
+  },
+  {
+    "id": "asus-rog-zephyrus-g14-2024",
+    "name": "ROG Zephyrus G14 (2024)",
+    "brand": "ASUS",
+    "category": "laptop",
+    "model_number": "GA403UV-DS74",
+    "canonical_url": "https://rog.asus.com/laptops/rog-zephyrus/rog-zephyrus-g14-2024/",
+    "specs": {
+      "cpu": "AMD Ryzen 9 8945HS",
+      "gpu": "NVIDIA GeForce RTX 4060",
+      "ram_gb": 32,
+      "ram_type": "LPDDR5X",
+      "ram_upgradeable": false,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "2560x1600",
+      "display_hz": 165,
+      "battery_wh": 73,
+      "weight_lbs": 3.09,
+      "os": "Windows 11 Home",
+      "linux_support": "partial",
+      "virtualization": "AMD-V (SVM) supported",
+      "ports": "2x USB-A, USB-C (Thunderbolt 4), HDMI 2.1, SD slot",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Prices vary by retailer [VERIFY current listing]",
+    "warranty_months": 12,
+    "warranty_coverage": "International Limited Warranty",
+    "source_urls": [
+      {
+        "url": "https://rog.asus.com/laptops/rog-zephyrus/rog-zephyrus-g14-2024/",
+        "source_type": "primary",
+        "title": "ASUS ROG Zephyrus G14 2024 official page"
+      }
+    ],
+    "notes": "RAM is soldered. Linux gaming community has active support. NVIDIA Optimus can complicate Linux workflow."
+  },
+  {
+    "id": "apple-macbook-pro-m3-14",
+    "name": "MacBook Pro 14-inch (M3)",
+    "brand": "Apple",
+    "category": "laptop",
+    "model_number": "MPHF3LL/A",
+    "canonical_url": "https://www.apple.com/macbook-pro/",
+    "specs": {
+      "cpu": "Apple M3 Pro (11-core)",
+      "gpu": "Apple M3 Pro (14-core GPU)",
+      "ram_gb": 18,
+      "ram_note": "18GB unified memory (base); 36GB available on higher configs",
+      "ram_upgradeable": false,
+      "storage_gb": 512,
+      "storage_type": "Apple SSD",
+      "storage_slots": 0,
+      "display_size_in": 14.2,
+      "display_resolution": "3024x1964",
+      "display_hz": 120,
+      "battery_wh": 70,
+      "weight_lbs": 3.51,
+      "os": "macOS",
+      "linux_support": "none",
+      "virtualization": "macOS Virtualization.framework only; no KVM/VirtualBox",
+      "ports": "3x Thunderbolt 4, HDMI 2.1, SD slot, MagSafe",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Check Apple.com for current pricing [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "AppleCare limited warranty",
+    "source_urls": [
+      {
+        "url": "https://www.apple.com/macbook-pro/specs/",
+        "source_type": "primary",
+        "title": "Apple MacBook Pro 14-inch specs"
+      }
+    ],
+    "notes": "Does NOT run Linux natively. Virtualization limited on macOS. Included for completeness."
+  },
+  {
+    "id": "acer-swift-x-14-2024",
+    "name": "Swift X 14 (2024)",
+    "brand": "Acer",
+    "category": "laptop",
+    "model_number": "SFX14-72G-74KH",
+    "canonical_url": "https://www.acer.com/us-en/laptops/swift/swift-x-14",
+    "specs": {
+      "cpu": "Intel Core Ultra 7 165H",
+      "gpu": "NVIDIA GeForce RTX 4070",
+      "ram_gb": 32,
+      "ram_type": "LPDDR5X",
+      "ram_upgradeable": false,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 14.5,
+      "display_resolution": "2880x1800",
+      "display_hz": 120,
+      "battery_wh": 78,
+      "weight_lbs": 3.64,
+      "os": "Windows 11 Home",
+      "linux_support": "partial",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "2x USB-A, Thunderbolt 4, USB-C, HDMI 2.1, SD slot",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Check Acer or retailers for current price [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "Limited",
+    "source_urls": [
+      {
+        "url": "https://www.acer.com/us-en/laptops/swift/swift-x-14",
+        "source_type": "primary",
+        "title": "Acer Swift X 14 official page"
+      }
+    ],
+    "notes": "RAM soldered. Good performance-per-dollar for creative/dev work."
+  },
+  {
+    "id": "thinkpad-t14s-gen4-amd",
+    "name": "ThinkPad T14s Gen 4 (AMD)",
+    "brand": "Lenovo",
+    "category": "laptop",
+    "model_number": "21F6001QUS",
+    "canonical_url": "https://www.lenovo.com/us/en/p/laptops/thinkpad/thinkpadt/thinkpad-t14s-gen-4/len101t0060",
+    "specs": {
+      "cpu": "AMD Ryzen 7 PRO 7840U",
+      "gpu": "AMD Radeon 780M",
+      "ram_gb": 32,
+      "ram_type": "LPDDR5",
+      "ram_upgradeable": false,
+      "storage_gb": 512,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "2240x1400",
+      "display_hz": 60,
+      "battery_wh": 57,
+      "weight_lbs": 2.82,
+      "os": "Windows 11 Pro",
+      "linux_support": "strong",
+      "virtualization": "AMD-V (SVM), IOMMU supported",
+      "ports": "2x USB-A, 2x USB-C (Thunderbolt 4), HDMI 2.0, headphone jack",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Business laptop — pricing varies by channel [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "Depot repair; optional Premier Support",
+    "source_urls": [
+      {
+        "url": "https://www.lenovo.com/us/en/p/laptops/thinkpad/thinkpadt/thinkpad-t14s-gen-4/len101t0060",
+        "source_type": "primary",
+        "title": "Lenovo ThinkPad T14s Gen 4 official page"
+      },
+      {
+        "url": "https://psref.lenovo.com/Product/ThinkPad/ThinkPad_T14s_Gen_4_(AMD)",
+        "source_type": "primary",
+        "title": "Lenovo PSREF spec sheet"
+      }
+    ],
+    "notes": "Business-grade Linux compatibility. AMD IOMMU supports VMs well. RAM soldered."
+  },
+  {
+    "id": "dell-precision-5480",
+    "name": "Precision 5480",
+    "brand": "Dell",
+    "category": "laptop",
+    "model_number": "H6TN6",
+    "canonical_url": "https://www.dell.com/en-us/shop/laptops/precision-5480-mobile-workstation/spd/precision-14-5480-laptop",
+    "specs": {
+      "cpu": "Intel Core i7-13800H",
+      "gpu": "NVIDIA RTX 3500 Ada",
+      "ram_gb": 64,
+      "ram_type": "DDR5",
+      "ram_upgradeable": true,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 2,
+      "display_size_in": 14.0,
+      "display_resolution": "2560x1600",
+      "display_hz": 60,
+      "battery_wh": 86,
+      "weight_lbs": 3.39,
+      "os": "Ubuntu 22.04 LTS (ISV certified)",
+      "linux_support": "certified",
+      "virtualization": "VT-x, VT-d; workstation-grade",
+      "ports": "2x Thunderbolt 4, USB-A, SD slot, HDMI 2.0",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Workstation pricing — typically above $1,500 [VERIFY]",
+    "warranty_months": 36,
+    "warranty_coverage": "ProSupport 3-year included",
+    "source_urls": [
+      {
+        "url": "https://www.dell.com/en-us/shop/laptops/precision-5480-mobile-workstation/spd/precision-14-5480-laptop",
+        "source_type": "primary",
+        "title": "Dell Precision 5480 official page"
+      }
+    ],
+    "notes": "Linux certified (ISV). Exceeds budget for most configurations. Included for reference."
+  },
+  {
+    "id": "starbook-mk-vi",
+    "name": "StarBook Mk VI",
+    "brand": "Star Labs",
+    "category": "laptop",
+    "model_number": "STAR-BOOK-MK6",
+    "canonical_url": "https://starlabs.systems/pages/starbook",
+    "specs": {
+      "cpu": "Intel Core i7-1260P",
+      "gpu": "Intel Iris Xe",
+      "ram_gb": 64,
+      "ram_type": "DDR4",
+      "ram_upgradeable": true,
+      "storage_gb": null,
+      "storage_note": "Configurable; M.2 NVMe",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "1920x1080",
+      "display_hz": 60,
+      "battery_wh": 54,
+      "weight_lbs": 2.87,
+      "os": "Linux only (user choice of distro)",
+      "linux_support": "native",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "USB-A, USB-C, HDMI, SD slot",
+      "wifi": "Wi-Fi 6",
+      "bluetooth": "5.0"
+    },
+    "price_usd": null,
+    "price_note": "Check starlabs.systems for current pricing [VERIFY]",
+    "warranty_months": 12,
+    "warranty_coverage": "Limited",
+    "source_urls": [
+      {
+        "url": "https://starlabs.systems/pages/starbook",
+        "source_type": "primary",
+        "title": "Star Labs StarBook Mk VI official page"
+      }
+    ],
+    "notes": "Linux-first device. Upgradeable RAM. Open-source firmware available."
+  },
+  {
+    "id": "tuxedo-infinitybook-pro-14-gen9",
+    "name": "InfinityBook Pro 14 Gen9",
+    "brand": "TUXEDO Computers",
+    "category": "laptop",
+    "model_number": "TUXEDO-IBP14-GEN9",
+    "canonical_url": "https://www.tuxedocomputers.com/en/Linux-Hardware/Linux-Notebooks/14-Inch/TUXEDO-InfinityBook-Pro-14-Gen9.tuxedo",
+    "specs": {
+      "cpu": "Intel Core Ultra 7 155H",
+      "gpu": "NVIDIA GeForce RTX 4060 (optional)",
+      "ram_gb": null,
+      "ram_note": "Configurable; up to 96GB DDR5 SO-DIMM",
+      "ram_upgradeable": true,
+      "storage_gb": null,
+      "storage_note": "Configurable; dual M.2 NVMe",
+      "storage_slots": 2,
+      "display_size_in": 14.0,
+      "display_resolution": "2880x1800",
+      "display_hz": 90,
+      "battery_wh": 99,
+      "weight_lbs": 2.82,
+      "os": "Ubuntu or openSUSE (Linux native)",
+      "linux_support": "native",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "2x Thunderbolt 4, USB-A, USB-C, HDMI, SD slot",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "Check TUXEDO website for current EUR/USD pricing [VERIFY]",
+    "warranty_months": 24,
+    "warranty_coverage": "2-year warranty",
+    "source_urls": [
+      {
+        "url": "https://www.tuxedocomputers.com/en/Linux-Hardware/Linux-Notebooks/14-Inch/TUXEDO-InfinityBook-Pro-14-Gen9.tuxedo",
+        "source_type": "primary",
+        "title": "TUXEDO InfinityBook Pro 14 Gen9 official page"
+      }
+    ],
+    "notes": "Linux-native. Highly configurable RAM/storage. German Linux laptop specialist."
+  },
+  {
+    "id": "msi-prestige-14-evo-b14",
+    "name": "Prestige 14 Evo B14",
+    "brand": "MSI",
+    "category": "laptop",
+    "model_number": "B14M-029US",
+    "canonical_url": "https://www.msi.com/Laptop/Prestige-14-Evo-B14",
+    "specs": {
+      "cpu": "Intel Core Ultra 7 155H",
+      "gpu": "Intel Arc Graphics",
+      "ram_gb": 32,
+      "ram_type": "LPDDR5",
+      "ram_upgradeable": false,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "2880x1800",
+      "display_hz": 90,
+      "battery_wh": 72,
+      "weight_lbs": 2.82,
+      "os": "Windows 11 Home",
+      "linux_support": "partial",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "2x USB-A, Thunderbolt 4, USB-C, HDMI, SD slot",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "[VERIFY current retail price]",
+    "warranty_months": 24,
+    "warranty_coverage": "2-year limited",
+    "source_urls": [
+      {
+        "url": "https://www.msi.com/Laptop/Prestige-14-Evo-B14",
+        "source_type": "primary",
+        "title": "MSI Prestige 14 Evo B14 official page"
+      }
+    ],
+    "notes": "RAM soldered. Lightweight. Linux community reports are mixed."
+  },
+  {
+    "id": "gigabyte-aero-16-2024",
+    "name": "AERO 16 OLED (2024)",
+    "brand": "Gigabyte",
+    "category": "laptop",
+    "model_number": "BKF-H5US963SH",
+    "canonical_url": "https://www.gigabyte.com/Laptop/AERO-16--2024",
+    "specs": {
+      "cpu": "Intel Core i9-14900HX",
+      "gpu": "NVIDIA GeForce RTX 4070",
+      "ram_gb": 32,
+      "ram_type": "DDR5",
+      "ram_upgradeable": true,
+      "storage_gb": 1000,
+      "storage_type": "NVMe SSD",
+      "storage_slots": 2,
+      "display_size_in": 16.0,
+      "display_resolution": "3840x2400 OLED",
+      "display_hz": 60,
+      "battery_wh": 99,
+      "weight_lbs": 5.51,
+      "os": "Windows 11 Pro",
+      "linux_support": "partial",
+      "virtualization": "VT-x, VT-d supported",
+      "ports": "3x Thunderbolt 4, 2x USB-A, HDMI 2.1, SD slot",
+      "wifi": "Wi-Fi 6E",
+      "bluetooth": "5.3"
+    },
+    "price_usd": null,
+    "price_note": "[VERIFY current price — typically above $1,500]",
+    "warranty_months": 24,
+    "warranty_coverage": "2-year limited",
+    "source_urls": [
+      {
+        "url": "https://www.gigabyte.com/Laptop/AERO-16--2024",
+        "source_type": "primary",
+        "title": "Gigabyte AERO 16 OLED 2024 official page"
+      }
+    ],
+    "notes": "Heavy and above budget for most configs. Strong for creative workloads."
+  },
+  {
+    "id": "purism-librem-14",
+    "name": "Librem 14",
+    "brand": "Purism",
+    "category": "laptop",
+    "model_number": "LIBREM14",
+    "canonical_url": "https://puri.sm/products/librem-14/",
+    "specs": {
+      "cpu": "Intel Core i7-10710U",
+      "gpu": "Intel UHD 620",
+      "ram_gb": null,
+      "ram_note": "Configurable; up to 64GB DDR4",
+      "ram_upgradeable": true,
+      "storage_gb": null,
+      "storage_note": "Configurable; M.2 NVMe",
+      "storage_slots": 1,
+      "display_size_in": 14.0,
+      "display_resolution": "1920x1080",
+      "display_hz": 60,
+      "battery_wh": 54,
+      "weight_lbs": 3.0,
+      "os": "PureOS (Debian-based Linux)",
+      "linux_support": "native",
+      "virtualization": "VT-x supported",
+      "ports": "2x USB-A, USB-C, HDMI, SD slot",
+      "wifi": "Wi-Fi (Atheros — hardware kill switch available)",
+      "bluetooth": "5.0"
+    },
+    "price_usd": null,
+    "price_note": "[VERIFY current Purism pricing and availability]",
+    "warranty_months": 12,
+    "warranty_coverage": "Limited",
+    "source_urls": [
+      {
+        "url": "https://puri.sm/products/librem-14/",
+        "source_type": "primary",
+        "title": "Purism Librem 14 official page"
+      }
+    ],
+    "notes": "Security-focused. Open firmware (coreboot). Older CPU gen. Hardware kill switches for mic/camera/WiFi."
+  }
+]
