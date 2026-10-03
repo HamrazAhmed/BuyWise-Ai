@@ -1,0 +1,38 @@
+# BuyWise AI — Python backend dependencies
+# Install: pip install -r requirements.txt
+# Python 3.11+ required
+
+# ─── Core framework ───────────────────────────────────────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+pydantic==2.11.4
+python-dotenv==1.1.0
+
+# ─── Google Generative AI (Gemini) ───────────────────────────────────────────
+# [VERIFY] current package name and version at https://pypi.org/project/google-generativeai/
+google-generativeai==0.8.5
+
+# ─── RAG / vector store ───────────────────────────────────────────────────────
+# Primary: Supabase pgvector (via psycopg2 + asyncpg)
+psycopg2-binary==2.9.10      # sync fallback for migrations/seed
+asyncpg==0.30.0               # async Postgres driver
+
+# Local fallback: Chroma in-memory [VERIFY free license]
+chromadb==0.6.3               # in-memory vector store for local dev
+
+# Sentence Transformers: local embedding fallback if Gemini embedding unavailable [VERIFY]
+sentence-transformers==4.1.0  # uses HuggingFace models locally
+
+# ─── HTTP / scraping ──────────────────────────────────────────────────────────
+httpx==0.28.1                 # async HTTP client for source fetching
+beautifulsoup4==4.13.4        # HTML parsing for source cleaning
+lxml==5.4.0                   # faster HTML parser backend
+
+# ─── Data / utilities ─────────────────────────────────────────────────────────
+tenacity==9.1.2               # retry with exponential backoff
+python-json-logger==3.3.0     # structured JSON logging
+
+# ─── Dev / test ───────────────────────────────────────────────────────────────
+pytest==8.3.5
+pytest-asyncio==0.25.3
+httpx                         # also used by TestClient
