@@ -15,7 +15,6 @@ google-generativeai==0.8.5
 httpx==0.28.1                 # async HTTP client for source fetching
 beautifulsoup4==4.13.4        # HTML parsing for source cleaning
 
-# ─── Data / utilities ─────────────────────────────────────────────────────────
-tenacity==9.1.2               # retry with exponential backoff
+tenacity                      # retry with exponential backoff
 python-json-logger==3.3.0     # structured JSON logging
 streamlit==1.38.0
