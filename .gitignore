@@ -64,3 +64,6 @@ tsconfig.tsbuildinfo
 Doc/*.md
 !Doc/Buywise-PRD.md
 Doc/*CHECKS.json
+
+# Local provider diagnostics
+Doc/*CHECK.json
