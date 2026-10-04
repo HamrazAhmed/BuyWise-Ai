@@ -419,3 +419,26 @@ button.evidence-badge:hover { text-decoration: underline; }
 .evidence-insufficient { color: var(--muted-foreground); background: var(--background); }
 .requirements-page fieldset>.ui-button { margin-right: 12px; }
 .product-tabs button[aria-selected=true] { border-color: var(--primary); color: var(--primary); }
+
+/* Product research: clear visual anchors and compact evidence navigation. */
+.product-media { margin: 20px 23px 0; position: relative; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.product-media img { width: 100%; height: 180px; object-fit: contain; padding: 20px; background: white; }
+.product-media-fallback { height: 145px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted-foreground); }
+.product-media-fallback span { font-size: 11px; }
+.product-media>a { display: flex; justify-content: center; align-items: center; gap: 7px; border-top: 1px solid var(--line); padding: 10px; font-size: 12px; font-weight: 600; color: var(--primary); }
+.product-source-link { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 13px; padding: 9px; color: var(--primary); }
+.fit-meter { height: 5px; margin-top: 18px; border-radius: 5px; overflow: hidden; background: var(--line); }
+.fit-meter span { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+.product-tabs { gap: 6px; padding: 7px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; }
+.product-tabs button { flex: 1 0 auto; border: 0; border-radius: 6px; padding: 12px 16px; transition: background .15s,color .15s; }
+.product-tabs button[aria-selected=true] { background: var(--card); color: var(--primary); box-shadow: 0 1px 4px rgb(0 0 0 / .08); }
+.product-tab-content { padding: 12px 28px; }
+.detail-spec-row { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.detail-spec-row:last-child { border-bottom: 0; }
+.detail-spec-value { display: flex; flex-direction: column; gap: 7px; }
+.detail-spec-value>span { text-transform: uppercase; letter-spacing: .09em; font-size: 10px; color: var(--muted-foreground); }
+.detail-spec-value>strong { font-size: 17px; font-weight: 600; }
+.search-copy { max-width: 78ch; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.search-copy p { margin: 16px 0; }
+.search-suggestions { width: 100%; height: 85px; margin-top: 18px; border: 0; }
+@media(max-width:640px) { .product-tabs { margin-inline: 0; padding: 5px; } .product-tabs button { font-size: 12px; padding: 11px 13px; } .product-tab-content { padding: 8px 18px; } .detail-spec-value>strong { font-size: 15px; } }
