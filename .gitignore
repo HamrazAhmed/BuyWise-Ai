@@ -54,3 +54,13 @@ yarn-debug.log*
 pnpm-debug.log*
 .turbo/
 coverage/
+
+# Local fixture database
+.local/
+.playwright-cli/
+tsconfig.tsbuildinfo
+
+# Local planning, implementation reports and verification output
+Doc/*.md
+!Doc/Buywise-PRD.md
+Doc/*CHECKS.json
