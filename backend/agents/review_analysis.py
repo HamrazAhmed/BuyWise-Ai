@@ -49,7 +49,7 @@ Mark ALL summaries as opinion, not fact.
 
 
 class ReviewOutput(BaseModel):
-    themes: list[dict] = Field(default_factory=list)
+    themes: list[ReviewTheme] = Field(default_factory=list)
     # Each: {theme, sentiment, summary}
 
 
@@ -95,13 +95,18 @@ class ReviewAnalysisAgent(AgentBase):
             ) for t in REVIEW_THEMES[:5]]
 
         # Retrieve secondary (review) chunks specifically
+        from rag.store import get_vector_store
+        if not any(c.kind == 'reviews' for c in await get_vector_store().for_product(product.id)):
+            return []
         chunks = await retrieve(
             query=f"{product.name} user review performance battery build quality",
             product_id=product.id,
             source_type="secondary",
             top_k=6,
             llm_provider=self.llm,
+            notices=state.notices,
         )
+        chunks = [c for c in chunks if c.kind == 'reviews']
 
         if not chunks:
             return [ReviewTheme(
@@ -123,14 +128,7 @@ class ReviewAnalysisAgent(AgentBase):
                 schema=ReviewOutput,
                 temperature=0.1,
             )
-            return [
-                ReviewTheme(
-                    theme=t.get("theme", "Unknown"),
-                    sentiment=t.get("sentiment", "neutral"),
-                    summary=t.get("summary", "No data."),
-                )
-                for t in output.themes
-            ]
+            return output.themes
         except Exception as e:
             logger.error("Review LLM call failed for %s: %s", product.name, e)
             return []

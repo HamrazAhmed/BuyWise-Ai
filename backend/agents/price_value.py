@@ -27,11 +27,9 @@ def _extract_budget(requirements: list[Requirement]) -> Optional[float]:
     """Extract budget ceiling from requirements list."""
     for req in requirements:
         if req.key.lower() == "budget":
-            try:
-                val = req.value.replace("usd", "").replace("$", "").replace(",", "").strip()
-                return float(val)
-            except ValueError:
-                pass
+            from agents.matching import quantity
+            if req.operator in ("<", "<=", "=", "=="):
+                return quantity(req.value, "budget")
     return None
 
 
@@ -77,7 +75,14 @@ class PriceValueAgent(AgentBase):
                     is_stale=False,
                     source_id=f"seed_{product.id}",
                 )
-                budget_fit_note = _assess_budget_fit(price_usd, budget)
+                if getattr(self.llm, "data_mode", None) == "fixture":
+                    from rag.retrieve import retrieve, chunks_to_context
+                    from llm.gemini import wrap_context
+                    chunks = await retrieve(query=f"{product.name} price", product_id=product.id, llm_provider=self.llm, notices=state.notices)
+                    price_info = await self.llm.generate_json(wrap_context(chunks_to_context(chunks)), PriceInfo)
+                elif seed and seed.get('market') == 'PK':
+                    price_info = PriceInfo(amount=seed['amount'], currency='PKR', seller=seed['seller'], fetched_at=seed['observed_at'] or None, is_stale=True, source_id=seed['source_id'])
+                budget_fit_note = 'Recorded price requires source and age validation before budget matching.' if price_info.amount is not None else 'Price unavailable; confirm current listing.'
 
                 state.prices[product.id] = {
                     "price_info": price_info,

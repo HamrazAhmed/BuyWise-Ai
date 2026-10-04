@@ -50,72 +50,37 @@ def _load_seed() -> list[dict]:
         return json.load(f)
 
 
-def _score_product(product: dict, requirements: list[Requirement]) -> float:
-    """
-    Simple rule-based relevance score for seed selection.
-    Higher = better match. Used to select top 3-5 candidates.
-    """
-    score = 0.0
-    specs = product.get("specs", {})
-
-    for req in requirements:
-        key = req.key.lower()
-        value = req.value.lower()
-        operator = req.operator
-
-        if key == "budget":
-            # Budget matching: prefer products with no price (unknown) over definitely too expensive
-            price = product.get("price_usd")
-            if price is None:
-                score += 0.5  # unknown price — might fit
-            else:
-                try:
-                    budget_val = float(value.replace("usd", "").replace("$", "").strip())
-                    if operator in ("<=", "<") and price <= budget_val:
-                        score += 2.0 if req.priority == "must" else 1.0
-                    elif operator in (">", ">=") and price >= budget_val:
-                        score += 1.0
-                except ValueError:
-                    pass
-
-        elif key == "ram":
-            ram = specs.get("ram_gb")
-            if ram is None:
-                # Has configurable RAM — might meet requirement
-                if specs.get("ram_note") or specs.get("ram_upgradeable"):
-                    score += 0.5
-            else:
-                try:
-                    req_val = float("".join(c for c in value if c.isdigit() or c == "."))
-                    if operator in (">=", ">") and ram >= req_val:
-                        score += 2.0 if req.priority == "must" else 1.0
-                except ValueError:
-                    pass
-
-        elif key in ("os_compatibility", "linux", "linux_compatibility", "linux support"):
-            linux_support = specs.get("linux_support", "")
-            if "native" in linux_support or "certified" in linux_support:
-                score += 2.0
-            elif "strong" in linux_support:
-                score += 1.5
-            elif "partial" in linux_support:
-                score += 0.5
-
-        elif key == "virtualization":
-            virt = specs.get("virtualization", "")
-            if virt and "not supported" not in virt.lower():
-                score += 1.0
-
-        elif key == "upgradeability":
-            if specs.get("ram_upgradeable"):
-                score += 1.0
-
-    # Prefer lighter products for portability
-    weight = specs.get("weight_lbs")
-    if weight and weight < 3.5:
-        score += 0.3
-
-    return score
+def _score_product(product: dict, requirements: list[Requirement]) -> tuple[int, float]:
+    """Rank known must-have failures behind uncertain and satisfied candidates."""
+    from agents.matching import match_requirement
+    from models.product import Spec
+    specs = [Spec(key=k, value=str(v), status="supported", evidence_ids=[f"seed_{product['id']}"])
+             for k, v in product.get("specs", {}).items() if v is not None]
+    if product.get("price_usd") is not None:
+        specs.append(Spec(key="budget", value=f"{product['price_usd']} USD", status="supported", evidence_ids=[f"seed_{product['id']}"]))
+    if product.get('market') == 'PK' and product.get('amount') is not None:
+        from datetime import datetime, timezone, timedelta
+        try:
+            age = datetime.now(timezone.utc) - datetime.fromisoformat(product['observed_at'].replace('Z', '+00:00'))
+            fresh = timedelta(0) <= age <= timedelta(hours=24)
+        except (ValueError, TypeError):
+            fresh = False
+        specs.append(Spec(key='budget', value=f"{product['amount']} {product['currency']}", status='supported' if fresh else 'insufficient', evidence_ids=[product['source_id']]))
+    if product.get("documents"):
+        from datetime import datetime, timezone, timedelta
+        documents = {d["payload"]["kind"]: d for d in product["documents"]}
+        specs = [Spec.model_validate(s) for s in documents["specs"]["payload"]["specs"]]
+        price = documents["price"]["payload"]
+        stale = datetime.now(timezone.utc) - datetime.fromisoformat(price["fetched_at"].replace("Z", "+00:00")) > timedelta(hours=24)
+        if price["amount"] is not None:
+            specs.append(Spec(key="budget", value=f"{price['amount']} USD",
+                              status="insufficient" if stale else "supported",
+                              evidence_ids=[documents["price"]["source_id"]]))
+    weights = {"must": 4, "high": 3, "preferred": 2, "optional": 1}
+    matches = [(r, match_requirement(r, specs)[0]) for r in requirements]
+    failures = sum(1 for r, m in matches if r.priority == "must" and m == "✕")
+    score = sum(weights[r.priority] for r, m in matches if m == "✓")
+    return -failures, score
 
 
 def select_candidates(products: list[dict], requirements: list[Requirement],
@@ -177,7 +142,16 @@ class ProductResearchAgent(AgentBase):
         try:
             await state.emit_progress("Finding products", step="research")
 
-            seed_products = _load_seed()
+            if getattr(self.llm, "data_mode", None) == "fixture":
+                from llm.fixture import load_fixtures
+                seed_products = load_fixtures()
+            else:
+                import os
+                if os.getenv('BUYWISE_MARKET', 'PK') == 'PK':
+                    from data.pakistan import prepare
+                    seed_products = await prepare(self.llm, state.notices)
+                else:
+                    seed_products = _load_seed()
             if not seed_products:
                 logger.warning("Seed dataset empty — no candidates found")
                 self._finish_run(run, start)

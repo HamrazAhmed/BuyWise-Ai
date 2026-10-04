@@ -85,9 +85,21 @@ class WarrantyAgent(AgentBase):
 
     async def _extract_warranty(self, product, state: RunState) -> tuple[Warranty, ReturnPolicy]:
         """Extract warranty and return policy from seed data or LLM."""
+        if getattr(self.llm, "data_mode", None) == "fixture":
+            from rag.retrieve import retrieve, chunks_to_context
+            from llm.gemini import wrap_context
+            chunks = await retrieve(query=f"{product.name} warranty return policy", product_id=product.id, llm_provider=self.llm, notices=state.notices)
+            output = await self.llm.generate_json(WARRANTY_PROMPT.format(product_name=product.name, context=wrap_context(chunks_to_context(chunks))), WarrantyReturnOutput)
+            return (Warranty(duration_months=output.warranty_months, coverage=output.warranty_coverage, conditions=output.warranty_conditions, source_id=f"{product.id}_policy", completeness=output.completeness),
+                    ReturnPolicy(window_days=output.return_window_days, conditions=output.return_conditions, seller_dependent=output.seller_dependent, source_id=f"{product.id}_policy"))
         # Try seed data first
         seed_candidates = getattr(state, "_seed_candidates", [])
         seed = next((c for c in seed_candidates if c["id"] == product.id), None)
+
+        if seed and seed.get('market') == 'PK':
+            from data.pakistan import RETURN_CONDITIONS
+            return (Warranty(duration_months=seed['warranty_months'], coverage=seed['warranty_coverage'], conditions=seed['warranty_conditions'], completeness='partial', source_id=product.id + '__warranty'),
+                    ReturnPolicy(window_days=None, conditions=RETURN_CONDITIONS, seller_dependent=True, source_id=product.id + '__returns'))
 
         warranty_months = None
         warranty_coverage = None

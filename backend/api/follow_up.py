@@ -7,9 +7,12 @@ POST /api/compare-products — generate comparison for specific product IDs.
 import logging
 from fastapi import APIRouter, HTTPException
 
-from models.comparison import FollowUpRequest, FollowUpResponse
+from models.comparison import FollowUpRequest, FollowUpResponse, Comparison
+from models.product import CompareProductsRequest
+from agents.base import RunState
+from agents.comparison import ComparisonAgent
 from models.common import ApiError, ApiErrorCode, ApiErrorResponse
-from agents.orchestrator import get_comparison
+from agents.orchestrator import get_comparison, get_request_comparison, store_comparison
 from agents.follow_up import answer_follow_up
 from llm.base import LLMRateLimitError, LLMError
 
@@ -63,29 +66,28 @@ async def follow_up(body: FollowUpRequest):
         )
 
 
-@router.post("/compare-products", tags=["pipeline"])
-async def compare_products(body: dict):
-    """
-    Trigger a comparison for specific product IDs within an existing request.
-    Simplified: for MVP, use /research-products which handles the full pipeline.
-    """
-    # For MVP: re-use existing comparison if available
-    request_id = body.get("request_id")
-    product_ids = body.get("product_ids", [])
-
-    if not product_ids or len(product_ids) < 2:
-        raise HTTPException(
-            status_code=400,
-            detail=ApiErrorResponse(
-                error=ApiError(
-                    code=ApiErrorCode.invalid_input,
-                    message="At least 2 product_ids are required.",
-                )
-            ).model_dump(),
-        )
-
-    # For MVP: just return a pointer to research-products
-    return {
-        "message": "Use /api/research-products with your requirements to trigger the full pipeline.",
-        "hint": "The pipeline automatically selects and compares 3-5 products based on your requirements.",
-    }
+@router.post("/compare-products", response_model=Comparison, tags=["pipeline"])
+async def compare_products(body: CompareProductsRequest):
+    source = get_comparison(body.comparison_id) if body.comparison_id else get_request_comparison(body.request_id)
+    if not source or source.request_id != body.request_id:
+        raise HTTPException(status_code=404, detail={"error": {"code": "NOT_FOUND", "message": "Research comparison for this request was not found."}})
+    products = {p.id: p for p in source.products}
+    if any(pid not in products for pid in body.product_ids):
+        raise HTTPException(status_code=404, detail={"error": {"code": "NOT_FOUND", "message": "Selected product is not in this comparison."}})
+    if not source.requirements:
+        raise HTTPException(status_code=400, detail={"error": {"code": "INVALID_INPUT", "message": "Comparison has no stored requirements; run research again."}})
+    selected = [products[pid] for pid in body.product_ids]
+    state = RunState(request_id=body.request_id, requirements=source.requirements, candidate_products=selected)
+    state.verified_specs = {p.id: p.specs for p in selected}
+    state.prices = {p.id: {"price_info": p.price_info} for p in selected}
+    state.review_themes = {p.id: p.review_themes for p in selected}
+    state.warranties = {p.id: (p.warranty, p.return_policy) for p in selected}
+    if source.data_mode != "demo":
+        from agents.evidence import EvidenceVerificationAgent
+        await EvidenceVerificationAgent().run(state, snapshot=True)
+    await ComparisonAgent().run(state)
+    result = state.comparison
+    result.data_mode = source.data_mode
+    result.notices = list(dict.fromkeys(source.notices + state.notices))
+    store_comparison(result)
+    return result

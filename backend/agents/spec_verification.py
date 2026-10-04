@@ -35,7 +35,7 @@ SPEC_KEYS = [
 
 class SpecExtractionOutput(BaseModel):
     """LLM output schema for spec verification."""
-    specs: list[dict] = Field(default_factory=list)
+    specs: list[Spec] = Field(default_factory=list)
     # Each dict: {key, value, status, evidence_ids, conflicting_values?}
 
 
@@ -111,10 +111,17 @@ class SpecVerificationAgent(AgentBase):
             product_id=product.id,
             top_k=8,
             llm_provider=self.llm,
+            notices=state.notices,
         )
 
         if not chunks:
             logger.warning("No RAG chunks for %s — using seed specs", product.name)
+            return self._specs_from_seed(product, state)
+
+        seed = next((c for c in getattr(state, '_seed_candidates', []) if c['id'] == product.id), None)
+        if seed and seed.get('market') == 'PK':
+            # Already parsed structured fields need no model paraphrase. The next
+            # evidence agent checks every field/value against stored source records.
             return self._specs_from_seed(product, state)
 
         context = wrap_context(chunks_to_context(chunks))
@@ -131,7 +138,7 @@ class SpecVerificationAgent(AgentBase):
                 schema=SpecExtractionOutput,
                 temperature=0.0,
             )
-            return [self._dict_to_spec(s) for s in output.specs]
+            return output.specs
         except Exception as e:
             logger.error("Spec LLM call failed for %s: %s", product.name, e)
             return self._specs_from_seed(product, state)
@@ -161,16 +168,7 @@ class SpecVerificationAgent(AgentBase):
                     key=k.replace("_", " ").title(),
                     value=str(v),
                     status=EvidenceStatus.supported,
-                    evidence_ids=[f"seed_{product.id}"],
+                    evidence_ids=[seed.get('source_id', f"seed_{product.id}")],
                 ))
 
         return specs
-
-    def _dict_to_spec(self, d: dict) -> Spec:
-        return Spec(
-            key=d.get("key", "Unknown"),
-            value=d.get("value", "unknown"),
-            status=d.get("status", EvidenceStatus.insufficient),
-            evidence_ids=d.get("evidence_ids", []),
-            conflicting_values=d.get("conflicting_values", []),
-        )

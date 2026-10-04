@@ -11,12 +11,13 @@ This endpoint is the entry point for the research flow. It:
 """
 
 import logging
+import asyncio
 from fastapi import APIRouter, HTTPException, Request
 
 from models.request import AnalyzeRequirementsRequest, AnalyzeRequirementsResponse
 from models.common import ApiError, ApiErrorCode, ApiErrorResponse
 from agents.requirement import RequirementAgent
-from llm.gemini import get_llm_provider
+from llm.gemini import get_llm_provider, GeminiProvider
 from llm.base import LLMRateLimitError, LLMError
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,8 @@ async def analyze_requirements(
 
     try:
         result = await agent.run(body.text)
+        from data.runtime import save_request
+        await asyncio.to_thread(save_request, result)
         return result
     except LLMRateLimitError as e:
         raise HTTPException(
@@ -66,7 +69,12 @@ async def analyze_requirements(
         )
     except LLMError as e:
         logger.error("LLM failure in analyze-requirements: %s", e)
-        # Graceful fallback: return mock requirements with a notice
+        if isinstance(llm, GeminiProvider):
+            raise HTTPException(status_code=502, detail=ApiErrorResponse(error=ApiError(
+                code=ApiErrorCode.upstream_failure,
+                message=str(e),
+            )).model_dump())
+        # Key-free demo provider retains its explicitly labeled fallback.
         agent = RequirementAgent(llm=None)  # uses built-in fallback
         try:
             return await agent.run_mock(body.text)
@@ -92,3 +100,7 @@ async def analyze_requirements(
                 )
             ).model_dump(),
         )
+
+    finally:
+        if hasattr(llm, "aclose"):
+            await llm.aclose()

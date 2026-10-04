@@ -52,6 +52,7 @@ class RunState:
     agent_runs: list[AgentRun] = field(default_factory=list)
     status: str = ShoppingRequestStatus.pending
     error: Optional[str] = None
+    notices: list[str] = field(default_factory=list)
 
     # SSE progress callback (set by orchestrator)
     _progress_callback: Optional[Any] = field(default=None, repr=False)

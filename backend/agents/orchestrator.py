@@ -14,8 +14,8 @@ Results are cached by (request_id + requirements hash) to avoid repeated researc
 
 Demo cache (PRD §23, §29):
   Pre-warmed comparison for the demo scenario is loaded on first request.
-  When GEMINI_API_KEY is absent (MockLLMProvider), ALL requests return the
-  demo comparison so the full UI flow works without any API key.
+  Legacy auto/no-key and explicit demo mode return labeled canned results.
+  Explicit fixture mode executes the pipeline on synthetic source records.
 """
 
 import asyncio
@@ -37,6 +37,7 @@ from agents.comparison import ComparisonAgent
 from llm.gemini import get_llm_provider, MockLLMProvider
 from models.comparison import Comparison
 from models.request import Requirement
+from uuid import uuid4
 from rag.ingest import ingest_seed_data
 from data.demo_cache import build_demo_comparison, DEMO_REQUIREMENTS
 
@@ -46,7 +47,10 @@ logger = logging.getLogger(__name__)
 # Keyed by hash of (requirements). Per-process; cleared on cold-start.
 # For production, use Supabase to persist across cold-starts.
 
-_comparison_cache: dict[str, Comparison] = {}
+# ponytail: process-local cache; shared durable storage is P6 work.
+_comparison_cache: dict[str, tuple[float, Comparison]] = {}
+CACHE_TTL_SECONDS = 3600
+MAX_STORED_COMPARISONS = 100
 
 # Comparison objects keyed by comparison_id
 _comparison_store: dict[str, Comparison] = {}
@@ -54,16 +58,11 @@ _comparison_store: dict[str, Comparison] = {}
 # Seed ingestion flag (run once per process startup)
 _seed_ingested = False
 
-# Pre-warm: compute the demo requirements hash at import time
-_DEMO_REQ_HASH = None
 
 
 def _requirements_hash(requirements: list[Requirement]) -> str:
     """Deterministic hash of requirements list for caching."""
-    req_data = [
-        {"key": r.key, "operator": r.operator, "value": r.value, "priority": r.priority}
-        for r in sorted(requirements, key=lambda r: r.key)
-    ]
+    req_data = [r.model_dump(mode="json") for r in requirements]
     return hashlib.sha256(json.dumps(req_data, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -86,6 +85,8 @@ async def run_pipeline(
     requirements: list[Requirement],
     raw_text: str = "",
     progress_callback: Optional[Callable] = None,
+    comparison_id: Optional[str] = None,
+    persist: bool = True,
 ) -> Comparison:
     """
     Run the full multi-agent pipeline and return a Comparison.
@@ -96,123 +97,160 @@ async def run_pipeline(
     :param progress_callback: Async callable for SSE progress events.
     :returns: Comparison result.
     """
-    # Check cache first
-    req_hash = _requirements_hash(requirements)
-    if req_hash in _comparison_cache:
-        logger.info("Cache hit for requirements hash %s", req_hash)
-        cached = _comparison_cache[req_hash]
-        _comparison_store[cached.id] = cached
-        return cached
-
     llm = get_llm_provider()
+    try:
+        is_mock = isinstance(llm, MockLLMProvider)
+        comparison_id = comparison_id or str(uuid4())
+        req_hash = hashlib.sha256(json.dumps({
+            "version": 6, "market": os.getenv('BUYWISE_MARKET', 'PK'), "requirements": _requirements_hash(requirements),
+            "raw_text": raw_text, "mode": getattr(llm, "data_mode", "demo" if is_mock else "live"),
+            "model": getattr(llm, "model", "mock"),
+        }, sort_keys=True).encode()).hexdigest()
+        now = time.monotonic()
+        for key in list(_comparison_cache):
+            if now - _comparison_cache[key][0] >= CACHE_TTL_SECONDS:
+                del _comparison_cache[key]
+        if req_hash in _comparison_cache:
+            result = _comparison_cache[req_hash][1].model_copy(deep=True)
+            result.id, result.request_id = comparison_id, request_id
+            if persist: store_comparison(result)
+            return result
 
-    # ── Demo cache / mock mode fallback (PRD §23, §29) ────────────────────────
-    # If running without a real LLM key, or if this matches the demo scenario,
-    # return the pre-warmed demo comparison instantly.
-    global _DEMO_REQ_HASH
-    if _DEMO_REQ_HASH is None:
-        _DEMO_REQ_HASH = _requirements_hash(DEMO_REQUIREMENTS)
+        if is_mock:
+            logger.info(
+                "Using pre-warmed demo comparison (%s)",
+                "mock mode",
+            )
+            if progress_callback:
+                await progress_callback({"type": "status", "message": "Loading canned demo data; no live research", "step": "demo"})
 
-    is_mock = isinstance(llm, MockLLMProvider)
-    is_demo_query = req_hash == _DEMO_REQ_HASH
+            demo = build_demo_comparison(request_id=request_id)
+            demo.id = comparison_id
+            demo.requirements = [r.model_copy(deep=True) for r in DEMO_REQUIREMENTS]
+            demo.data_mode = "demo"
+            demo.notices = ["Canned example comparison; no live research performed. Prices, claims and requirements are demo data."]
+            _cache_result(req_hash, demo)
+            if persist: store_comparison(demo)
 
-    if is_mock or is_demo_query:
-        logger.info(
-            "Using pre-warmed demo comparison (%s)",
-            "mock mode" if is_mock else "demo query match",
+            if progress_callback:
+                await progress_callback({"type": "status", "message": "Demo comparison ready", "step": "done"})
+            return demo
+
+        is_fixture = getattr(llm, "data_mode", None) == "fixture"
+        if is_fixture:
+            from llm.fixture import ingest_fixtures
+            await ingest_fixtures(llm)
+        else:
+            # Regional source ingestion runs in research so notices travel with results.
+            if os.getenv('BUYWISE_MARKET', 'PK') != 'PK':
+                await _ensure_seed_ingested(llm)
+
+        # Initialize shared state
+        state = RunState(
+            request_id=request_id,
+            comparison_id=comparison_id,
+            raw_text=raw_text,
+            requirements=requirements,
+            _progress_callback=progress_callback,
         )
-        if progress_callback:
-            await progress_callback({"type": "status", "message": "Understanding requirements", "step": "requirements"})
-            await asyncio.sleep(0.3)
-            await progress_callback({"type": "status", "message": "Finding products", "step": "research"})
-            await asyncio.sleep(0.3)
-            await progress_callback({"type": "status", "message": "Verifying specifications", "step": "specs"})
-            await asyncio.sleep(0.3)
-            await progress_callback({"type": "status", "message": "Analyzing reviews", "step": "reviews"})
-            await asyncio.sleep(0.3)
-            await progress_callback({"type": "status", "message": "Checking warranty & pricing", "step": "warranty"})
-            await asyncio.sleep(0.3)
-            await progress_callback({"type": "status", "message": "Verifying evidence", "step": "evidence"})
-            await asyncio.sleep(0.3)
-            await progress_callback({"type": "status", "message": "Building comparison", "step": "comparison"})
-            await asyncio.sleep(0.2)
 
-        demo = build_demo_comparison(request_id=request_id)
-        _comparison_cache[req_hash] = demo
-        _comparison_store[demo.id] = demo
+        if is_fixture:
+            # Exercise extraction without overwriting user-confirmed edits.
+            from agents.requirement import RequirementAgent
+            analysis_state = RunState(raw_text=raw_text or "I need a laptop", _progress_callback=progress_callback)
+            await RequirementAgent(llm=llm).run_on_state(analysis_state)
+            if analysis_state.category != "laptop":
+                raise ValueError("Fixture mode supports laptops only")
+            state.agent_runs.extend(analysis_state.agent_runs)
 
-        if progress_callback:
-            await progress_callback({"type": "status", "message": "Research complete", "step": "done"})
-        return demo
+        # ── Stage 1: Product Research (sequential) ────────────────────────────────
+        research_agent = ProductResearchAgent(llm=llm)
+        state = await research_agent.run(state)
 
-    await _ensure_seed_ingested(llm)
+        if not state.candidate_products:
+            raise RuntimeError("No candidate products found. Try broadening your requirements.")
 
-    # Initialize shared state
-    state = RunState(
-        request_id=request_id,
-        raw_text=raw_text,
-        requirements=requirements,
-        _progress_callback=progress_callback,
-    )
+        # ── Stage 2: Per-product agents (parallel) ────────────────────────────────
+        # Agents 3–6 run concurrently per product to minimize latency.
+        # They share state but each writes to different keys (product_id-keyed dicts).
 
-    # ── Stage 1: Product Research (sequential) ────────────────────────────────
-    research_agent = ProductResearchAgent(llm=llm)
-    state = await research_agent.run(state)
+        await state.emit_progress("Verifying specifications and analyzing reviews", step="parallel")
 
-    if not state.candidate_products:
-        raise RuntimeError("No candidate products found. Try broadening your requirements.")
+        spec_agent = SpecVerificationAgent(llm=llm)
+        review_agent = ReviewAnalysisAgent(llm=llm)
+        warranty_agent = WarrantyAgent(llm=llm)
+        price_agent = PriceValueAgent(llm=llm)
 
-    # ── Stage 2: Per-product agents (parallel) ────────────────────────────────
-    # Agents 3–6 run concurrently per product to minimize latency.
-    # They share state but each writes to different keys (product_id-keyed dicts).
+        # Run all four in parallel
+        await asyncio.gather(
+            spec_agent.run(state),
+            review_agent.run(state),
+            warranty_agent.run(state),
+            price_agent.run(state),
+        )
 
-    await state.emit_progress("Verifying specifications and analyzing reviews", step="parallel")
+        # ── Stage 3: Evidence Verification (sequential) ────────────────────────────
+        evidence_agent = EvidenceVerificationAgent(llm=llm)
+        state = await evidence_agent.run(state)
 
-    spec_agent = SpecVerificationAgent(llm=llm)
-    review_agent = ReviewAnalysisAgent(llm=llm)
-    warranty_agent = WarrantyAgent(llm=llm)
-    price_agent = PriceValueAgent(llm=llm)
+        # ── Stage 4: Comparison (sequential) ──────────────────────────────────────
+        comparison_agent = ComparisonAgent(llm=llm)
+        state = await comparison_agent.run(state)
 
-    # Run all four in parallel
-    await asyncio.gather(
-        spec_agent.run(state),
-        review_agent.run(state),
-        warranty_agent.run(state),
-        price_agent.run(state),
-    )
+        if state.comparison is None:
+            raise RuntimeError("Comparison agent failed to produce a result.")
 
-    # ── Stage 3: Evidence Verification (sequential) ────────────────────────────
-    evidence_agent = EvidenceVerificationAgent(llm=llm)
-    state = await evidence_agent.run(state)
+        state.comparison.result_json = {"agent_runs": [r.model_dump(mode="json") for r in state.agent_runs], "evidence_version": 1}
+        if is_fixture:
+            state.comparison.data_mode = "fixture"
+            state.comparison.notices = list(dict.fromkeys(state.notices)) + ["Synthetic local fixtures; no live AI or commercial research. Lexical embeddings test retrieval plumbing only."]
+        else:
+            state.comparison.notices = list(dict.fromkeys(state.notices))
 
-    # ── Stage 4: Comparison (sequential) ──────────────────────────────────────
-    comparison_agent = ComparisonAgent(llm=llm)
-    state = await comparison_agent.run(state)
+        # Cache the result
+        _cache_result(req_hash, state.comparison)
+        if persist: store_comparison(state.comparison)
 
-    if state.comparison is None:
-        raise RuntimeError("Comparison agent failed to produce a result.")
+        await state.emit_progress("Research complete", step="done")
 
-    # Cache the result
-    _comparison_cache[req_hash] = state.comparison
-    _comparison_store[state.comparison.id] = state.comparison
+        logger.info(
+            "Pipeline complete: comparison_id=%s, products=%d, agent_runs=%d",
+            state.comparison.id,
+            len(state.candidate_products),
+            len(state.agent_runs),
+        )
 
-    await state.emit_progress("Research complete", step="done")
+        return state.comparison
 
-    logger.info(
-        "Pipeline complete: comparison_id=%s, products=%d, agent_runs=%d",
-        state.comparison.id,
-        len(state.candidate_products),
-        len(state.agent_runs),
-    )
-
-    return state.comparison
+    finally:
+        if hasattr(llm, "aclose"):
+            await llm.aclose()
 
 
 def get_comparison(comparison_id: str) -> Optional[Comparison]:
     """Retrieve a stored comparison by ID."""
-    return _comparison_store.get(comparison_id)
+    from data.runtime import ensure, load_comparison
+    ensure()
+    return load_comparison(comparison_id)
 
 
 def store_comparison(comparison: Comparison) -> None:
     """Store a comparison (used after loading from DB)."""
-    _comparison_store[comparison.id] = comparison
+    from data.runtime import ensure, save_comparison
+    ensure()
+    save_comparison(comparison)
+    _comparison_store[comparison.id] = comparison.model_copy(deep=True)
+    while len(_comparison_store) > MAX_STORED_COMPARISONS:
+        del _comparison_store[next(iter(_comparison_store))]
+
+
+def _cache_result(key: str, comparison: Comparison) -> None:
+    _comparison_cache[key] = (time.monotonic(), comparison.model_copy(deep=True))
+    while len(_comparison_cache) > MAX_STORED_COMPARISONS:
+        del _comparison_cache[next(iter(_comparison_cache))]
+
+
+def get_request_comparison(request_id: str) -> Optional[Comparison]:
+    from data.runtime import ensure, load_comparison
+    ensure()
+    return load_comparison(request_id, by_request=True)
