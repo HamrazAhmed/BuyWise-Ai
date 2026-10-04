@@ -1,0 +1,29 @@
+[
+  {
+    "id": "pk_hp_victus_fa2013dx", "name": "HP Victus 15 FA2013DX", "brand": "HP", "category": "laptop", "model_number": "FA2013DX",
+    "canonical_url": "https://www.paklap.pk/hp-victus-15-fa2013dx-13th-gen-core-i5-nvidia-rtx-3050-gaming-laptop-pakistan.html",
+    "market": "PK", "seller": "Paklap", "currency": "PKR", "amount": 239999, "observed_at": "", "inspected_on": "2026-10-04",
+    "specs": {"cpu": "Intel Core i5-13420H", "gpu": "NVIDIA RTX 3050 6 GB", "ram": "8 GB", "storage": "512 GB", "display": "15.6 inches", "weight": "2.29 kg"},
+    "warranty_months": null, "warranty_coverage": "International warranty; duration and Pakistan claim coverage unconfirmed",
+    "warranty_conditions": "Optional paid 9-month seller warranty is excluded from this base listing; confirm the selected option and current terms.",
+    "notes": "Manually transcribed factual listing snapshot. Live observation timestamp unknown. Operating system omitted because table and marketing text disagree."
+  },
+  {
+    "id": "pk_hp_victus_fa2082wm", "name": "HP Victus 15 FA2082WM", "brand": "HP", "category": "laptop", "model_number": "FA2082WM",
+    "canonical_url": "https://www.paklap.pk/hp-victus-15-fa2082wm-13th-gen-core-i5-rtx-4050-gpu-laptop-pakistan.html",
+    "market": "PK", "seller": "Paklap", "currency": "PKR", "amount": 276900, "observed_at": "", "inspected_on": "2026-10-04",
+    "specs": {"cpu": "Intel Core i5-13420H", "gpu": "NVIDIA RTX 4050 6 GB", "ram": "16 GB", "storage": "512 GB", "display": "15.6 inches", "weight": "2.29 kg", "os": "Windows 11 Home"},
+    "warranty_months": null, "warranty_coverage": "International warranty; duration and Pakistan claim coverage unconfirmed",
+    "warranty_conditions": "Optional paid 9-month seller warranty is excluded from this base listing; confirm the selected option and current terms.",
+    "notes": "Manually transcribed factual listing snapshot. Live observation timestamp unknown. Catalog coverage is limited to approved SKUs."
+  },
+  {
+    "id": "pk_infinix_xl442", "name": "Infinix InBook Air XL442", "brand": "Infinix", "category": "laptop", "model_number": "XL442",
+    "canonical_url": "https://www.paklap.pk/infinix-inbook-air-xl442-core-i3-laptop-pakistan.html",
+    "market": "PK", "seller": "Paklap", "currency": "PKR", "amount": 135000, "observed_at": "", "inspected_on": "2026-10-04",
+    "specs": {"cpu": "Intel Core i3-1215U", "gpu": "Intel integrated graphics", "ram": "8 GB", "storage": "256 GB", "display": "14 inches", "weight": "1.24 kg", "os": "Windows 11 Home"},
+    "warranty_months": 12, "warranty_coverage": "Listing advertises local warranty; claim coverage must be confirmed with seller",
+    "warranty_conditions": "Confirm local warranty card, invoice, remaining duration and claim conditions before purchase.",
+    "notes": "Manually transcribed factual listing snapshot from a cached page. Live observation timestamp unknown."
+  }
+]

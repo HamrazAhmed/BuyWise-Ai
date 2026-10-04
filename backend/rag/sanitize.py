@@ -52,20 +52,22 @@ def strip_html(html: str) -> str:
     """
     try:
         from bs4 import BeautifulSoup  # type: ignore
-        soup = BeautifulSoup(html, "lxml")
+        soup = BeautifulSoup(html, "html.parser")
         # Remove script and style elements
         for element in soup(["script", "style", "noscript", "head"]):
             element.decompose()
         # Also remove hidden elements
-        for element in soup.find_all(style=re.compile(r"display\s*:\s*none", re.IGNORECASE)):
+        for element in soup.find_all(style=re.compile(r"display\s*:\s*none|visibility\s*:\s*hidden", re.IGNORECASE)):
             element.decompose()
-        text = soup.get_text(separator=" ", strip=True)
+        for element in soup.select("[hidden], [aria-hidden='true']"):
+            element.decompose()
+        text = soup.get_text(separator="\n", strip=True)
     except ImportError:
         # Fallback: simple regex tag stripping
         text = re.sub(r"<[^>]+>", " ", html)
 
     # Collapse whitespace
-    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"[^\S\n]+", " ", text).strip()
     return text
 
 
@@ -78,7 +80,7 @@ def sanitize_chunk(text: str, source_url: str = "") -> Optional[str]:
         (injection attempt detected or content too short to be useful).
     """
     # Strip HTML if present
-    if "<html" in text.lower() or "<body" in text.lower() or "<script" in text.lower():
+    if re.search(r"<[a-z][^>]*>", text, re.IGNORECASE):
         text = strip_html(text)
 
     # Drop empty or trivial content
@@ -94,6 +96,6 @@ def sanitize_chunk(text: str, source_url: str = "") -> Optional[str]:
         return None
 
     # Normalize whitespace
-    text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"[^\S\n]+", " ", text).strip()
 
     return text

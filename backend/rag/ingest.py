@@ -36,10 +36,11 @@ CHUNK_MAX_CHARS = 3200      # ~800 tokens
 CHUNK_OVERLAP_CHARS = 200   # ~10% overlap
 
 # ─── Domain allowlist (PRD §12, §19) ──────────────────────────────────────────
-# Only fetch from these domains to prevent SSRF and unlicensed scraping.
+# Network allowlist controls SSRF; it does not establish a license to reuse content.
 # Add new trusted domains here as needed.
 
 ALLOWED_DOMAINS = {
+    "paklap.pk",
     "lenovo.com", "psref.lenovo.com",
     "frame.work", "guides.frame.work",
     "system76.com",
@@ -62,14 +63,8 @@ ALLOWED_DOMAINS = {
 
 
 def _domain_allowed(url: str) -> bool:
-    """Return True if the URL's domain is in the allowlist."""
-    from urllib.parse import urlparse
-    try:
-        host = urlparse(url).netloc.lstrip("www.")
-        # Check if host matches or is a subdomain of an allowed domain
-        return any(host == d or host.endswith("." + d) for d in ALLOWED_DOMAINS)
-    except Exception:
-        return False
+    from .safe_fetch import allowed_url
+    return allowed_url(url, ALLOWED_DOMAINS)
 
 
 # ─── Chunking ────────────────────────────────────────────────────────────────
@@ -137,33 +132,9 @@ def spec_dict_to_text(specs: dict, product_name: str) -> str:
 # ─── Fetching ─────────────────────────────────────────────────────────────────
 
 async def fetch_url(url: str, timeout_s: int = 15) -> Optional[str]:
-    """
-    Fetch URL content and return cleaned text.
-    Only fetches from allowed domains. Returns None on failure.
-    """
-    if not _domain_allowed(url):
-        logger.warning("Domain not in allowlist, skipping: %s", url)
-        return None
-
-    try:
-        async with httpx.AsyncClient(timeout=timeout_s, follow_redirects=True) as client:
-            response = await client.get(
-                url,
-                headers={"User-Agent": "BuyWiseAI/0.1 (research bot; contact@buywise.ai)"},
-            )
-            if response.status_code != 200:
-                logger.warning("Non-200 from %s: %d", url, response.status_code)
-                return None
-
-            content_type = response.headers.get("content-type", "")
-            if "text/html" in content_type or "text/plain" in content_type:
-                return response.text
-            else:
-                logger.warning("Unsupported content-type %s from %s", content_type, url)
-                return None
-    except Exception as e:
-        logger.error("Failed to fetch %s: %s", url, e)
-        return None
+    from .safe_fetch import fetch_document
+    document = await fetch_document(url, ALLOWED_DOMAINS, timeout_s)
+    return document.text if document else None
 
 
 # ─── Seed ingestion ───────────────────────────────────────────────────────────
@@ -196,21 +167,22 @@ async def ingest_seed_data(llm_provider=None) -> int:
         # Convert spec dict to text and create a primary-source chunk
         if "specs" in product and product["specs"]:
             spec_text = spec_dict_to_text(product["specs"], product_name)
-            spec_text = sanitize_chunk(spec_text, source_url="seed")
+            spec_text = spec_text if sanitize_chunk(spec_text, source_url="seed") else None
             if spec_text:
                 chunk_data = {
                     "id": f"{product_id}__specs",
                     "product_id": product_id,
                     "source_id": f"seed_{product_id}",
-                    "source_type": "primary",
-                    "url": product.get("canonical_url", ""),
+                    "source_type": "secondary",
+                    "url": "local:backend/data/seed/laptops.json",
                     "content": spec_text,
-                    "fetched_at": fetched_at,
+                    "fetched_at": "",
+                    "origin": "curated",
                 }
 
                 # Embed the chunk
                 embedding = await _embed_chunk(spec_text, llm_provider)
-                chunk = Chunk(embedding=embedding, **chunk_data)
+                chunk = Chunk(embedding=embedding, claims=[{"key":k,"value":str(v)} for k,v in product["specs"].items() if v is not None], **chunk_data)
                 await store.upsert([chunk])
                 total_chunks += 1
 
@@ -224,12 +196,13 @@ async def ingest_seed_data(llm_provider=None) -> int:
                     "product_id": product_id,
                     "source_id": f"seed_{product_id}_notes",
                     "source_type": "secondary",
-                    "url": product.get("canonical_url", ""),
+                    "url": "local:backend/data/seed/laptops.json",
                     "content": notes_text,
-                    "fetched_at": fetched_at,
+                    "fetched_at": "",
+                    "origin": "curated",
                 }
                 embedding = await _embed_chunk(notes_text, llm_provider)
-                chunk = Chunk(embedding=embedding, **chunk_data)
+                chunk = Chunk(embedding=embedding, kind="notes", **chunk_data)
                 await store.upsert([chunk])
                 total_chunks += 1
 
@@ -243,16 +216,21 @@ async def ingest_url(url: str, product_id: str, source_type: str,
     Fetch and ingest a single URL for a product.
     Returns the number of chunks created.
     """
-    raw = await fetch_url(url)
-    if not raw:
+    from .safe_fetch import fetch_document
+    document = await fetch_document(url, ALLOWED_DOMAINS)
+    if not document:
         return 0
-
-    clean = sanitize_chunk(raw, source_url=url)
+    clean = sanitize_chunk(document.text, source_url=document.url)
     if not clean:
-        logger.warning("Content sanitization dropped everything from %s", url)
         return 0
-
-    fetched_at = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # A caller cannot promote a review domain to manufacturer evidence.
+    from urllib.parse import urlsplit
+    review_domains = {"notebookcheck.net", "rtings.com", "anandtech.com", "theverge.com", "arstechnica.com"}
+    host = urlsplit(document.url).hostname
+    is_review = any(host == d or host.endswith("."+d) for d in review_domains)
+    is_retailer = host == 'paklap.pk' or host.endswith('.paklap.pk')
+    source_type = "secondary" if is_review or is_retailer or source_type != "primary" else "primary"
+    url, fetched_at = document.url, document.fetched_at
     source_id = str(uuid4())
 
     raw_chunks = chunk_text(
@@ -268,7 +246,7 @@ async def ingest_url(url: str, product_id: str, source_type: str,
     embedded_chunks = []
     for c in raw_chunks:
         emb = await _embed_chunk(c["content"], llm_provider)
-        embedded_chunks.append(Chunk(embedding=emb, **c))
+        embedded_chunks.append(Chunk(embedding=emb, origin="web", kind="reviews" if is_review else "specs", title=title, **c))
 
     await store.upsert(embedded_chunks)
     logger.info("Ingested %d chunks from %s", len(embedded_chunks), url)
@@ -276,11 +254,15 @@ async def ingest_url(url: str, product_id: str, source_type: str,
 
 
 async def _embed_chunk(text: str, llm_provider=None) -> list[float]:
-    """Get embedding for a text chunk. Falls back to zero vector if no LLM."""
+    """Empty embeddings explicitly trigger degraded lexical retrieval."""
     if llm_provider is None:
-        return [0.0] * 768  # dummy embedding for mock mode
+        return []
     try:
-        return await llm_provider.embed(text)
-    except Exception as e:
-        logger.error("Embedding failed: %s", e)
-        return [0.0] * 768
+        embedding = await llm_provider.embed(text)
+        import math
+        if not embedding or not any(embedding) or any(not math.isfinite(v) for v in embedding):
+            return []
+        return embedding
+    except Exception:
+        logger.warning("Document embedding unavailable; lexical retrieval required")
+        return []
