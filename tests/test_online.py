@@ -41,3 +41,30 @@ class OnlineTests(unittest.TestCase):
         self.assertEqual(select_candidates([wrong], requirements), [])
         spec = Spec(key='gpu', value='RTX 5060 Ti 8 GB', status='supported', evidence_ids=['source'])
         self.assertEqual(match_requirement(requirements[1], [spec])[0], '✕')
+
+    def test_online_near_matches_keep_real_gaps(self):
+        reqs = [Requirement(key='brand', operator='=', value='ASUS', priority='must'),
+                Requirement(key='vram', operator='=', value='16 GB', priority='must')]
+        product = {'id': 'asus', 'brand': 'ASUS', 'specs': {'brand': 'ASUS', 'vram': '8 GB'}}
+        unrelated = {'id': 'hp', 'brand': 'HP', 'specs': {'brand': 'HP', 'vram': '4 GB'}}
+        self.assertEqual(select_candidates([product], reqs), [])
+        self.assertEqual(select_candidates([unrelated, product], reqs, allow_near_matches=True), [product])
+        spec = Spec(key='vram', value='8 GB', status='supported', evidence_ids=['source'])
+        self.assertEqual(match_requirement(reqs[1], [spec])[0], '✕')
+
+    def test_exchange_rate_citation_does_not_validate_laptop(self):
+        result = {'metadata': {'grounding_chunks': [{'web': {
+            'uri': 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/test',
+            'title': 'exchangerates.org.uk'}}], 'grounding_supports': [{
+            'segment': {'text': 'Dell Precision 3470 RAM 32 GB'}, 'grounding_chunk_indices': [0]}]}}
+        self.assertEqual(source_segments(result), [])
+
+    def test_bare_gpu_number_and_budget_only_discovery(self):
+        req = Requirement(key='gpu', operator='=', value='5060', priority='must')
+        spec = Spec(key='gpu', value='NVIDIA RTX 5060 8 GB', status='supported', evidence_ids=['source'])
+        self.assertEqual(match_requirement(req, [spec])[0], '✓')
+        spec.value = 'RTX 5060 Ti'
+        self.assertEqual(match_requirement(req, [spec])[0], '✕')
+        budget = Requirement(key='budget', operator='<=', value='300000 PKR', priority='must')
+        product = {'id':'asus', 'brand':'ASUS', 'specs':{'brand':'ASUS'}}
+        self.assertEqual(select_candidates([product], [budget], allow_near_matches=True), [product])
