@@ -171,7 +171,7 @@ export const statusLabels: Record<EvidenceStatus, string> = {
 export const priorityOptions: Priority[] = ['Must Have', 'High Priority', 'Preferred', 'Optional']
 
 export const heroExample =
-  'I need a laptop under $1,000 for cybersecurity. I use Linux and run multiple VMs. I want at least 32GB RAM.'
+  'I need a laptop in Pakistan under 300,000 PKR for programming, with at least 16 GB RAM.'
 
 export const footerNote =
   'Prices and availability change. Verify final retailer terms before purchase.'
@@ -201,7 +201,10 @@ export function getComparison(): Comparison {
     id: 'cmp_demo',
     requestId: 'req_demo',
     createdAt: new Date().toISOString(),
-    products,
+    products: products.map(p => ({ ...p, evidence: evidence.filter(e => p.specs.some(s => s.evidenceIds.includes(e.id))).map(e => ({ ...e, productId: p.id, origin: 'fixture' as const })) })),
+    requirements: [{ key: 'category', operator: '=', value: 'Laptop', priority: 'must', source: 'user' }, ...mockAnalyzeRequirements('Example').requirements.slice(0, 2), mockAnalyzeRequirements('Example').requirements[3], mockAnalyzeRequirements('Example').requirements[2], mockAnalyzeRequirements('Example').requirements[4]],
+    dataMode: 'demo',
+    notices: ['Static illustration only: products, requirements, evidence and prices are demo data. No research was performed.'],
     requirementMatches: requirementsByProduct as Record<string, Array<'✓' | '✕' | '?'>>,
     tradeoffs: [
       'Atlas 14 satisfies virtualization through its 8-core processor and verified 32GB memory.',
@@ -235,6 +238,8 @@ export function mockAnalyzeRequirements(_text: string): AnalyzeRequirementsRespo
       { key: 'virtualization',   operator: '=',        value: 'high',     priority: 'high',      source: 'user' },
       { key: 'upgradeability',   operator: '=',        value: 'preferred',priority: 'preferred', source: 'inferred' },
     ],
+    dataMode: 'demo',
+    notices: ['Example criteria only; these were not extracted from your request.'],
     missingInfo: ['Preferred screen size?', 'Portability importance?'],
   }
 }

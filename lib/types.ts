@@ -16,6 +16,12 @@ export type EvidenceStatus = 'verified' | 'supported' | 'conflicting' | 'insuffi
  */
 export interface Evidence {
   id: string
+  productId?: string
+  chunkId?: string
+  sourceId?: string
+  origin?: 'web' | 'curated' | 'fixture'
+  kind?: string
+  claims?: Array<{ key: string; value: string }>
   /** Human-readable title of the source document. */
   title: string
   /** URL of the original source. */
@@ -123,11 +129,27 @@ export interface Product {
   limitations: string[]
   /** Verified specifications with evidence. */
   specs: Spec[]
+  evidence?: Evidence[]
   /** Canonical product page URL. */
   canonicalUrl?: string
+  priceInfo?: PriceInfo | null
+  reviewThemes?: ReviewTheme[]
+  warranty?: Warranty | null
+  returnPolicy?: ReturnPolicy | null
+  mustHaveStatus?: 'met' | 'not_met' | 'uncertain'
+  weightedMatchScore?: number
 }
 
 // ─── Review / Warranty / Price ────────────────────────────────────────────────
+
+export interface PriceInfo {
+  amount: number | null
+  currency: string
+  seller: string | null
+  fetchedAt: string | null
+  isStale: boolean
+  sourceId?: string
+}
 
 export interface ReviewTheme {
   theme: string
@@ -176,6 +198,9 @@ export interface Comparison {
   tradeoffs: string[]
   /** Per-requirement analysis across all products. */
   requirementAnalysis?: RequirementAnalysis[]
+  requirements?: Requirement[]
+  dataMode?: 'live' | 'demo' | 'fixture'
+  notices?: string[]
 }
 
 export interface RequirementAnalysis {
@@ -203,11 +228,14 @@ export interface AnalyzeRequirementsResponse {
   requirements: Requirement[]
   /** Clarifying questions to ask the user (0–3). */
   missingInfo: string[]
+  dataMode?: 'live' | 'demo' | 'fixture'
+  notices?: string[]
 }
 
 /** POST /api/research-products — request */
 export interface ResearchProductsRequest {
   requestId: string
+  rawText?: string
   requirements: Requirement[]
 }
 
@@ -231,6 +259,7 @@ export interface SSEEvent {
 export interface CompareProductsRequest {
   requestId: string
   productIds: string[]
+  comparisonId?: string
 }
 
 /** POST /api/follow-up — request */
@@ -278,4 +307,5 @@ export interface ApiErrorResponse {
 export interface HealthResponse {
   status: 'ok'
   version: string
+  mockMode?: boolean
 }
