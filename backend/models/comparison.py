@@ -45,6 +45,7 @@ class Comparison(BaseModel):
     requirements: list[Requirement] = Field(default_factory=list)
     data_mode: Literal["live", "demo", "fixture"] = "live"
     notices: list[str] = Field(default_factory=list)
+    search_report: Optional[dict] = None
     # {product_id: ['✓', '✓', '✕', '?', ...]} — one entry per requirement
     requirement_matches: dict[str, list[str]] = Field(default_factory=dict)
     # Key trade-off sentences for the "Key differences" card

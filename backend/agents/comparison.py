@@ -113,6 +113,7 @@ class ComparisonAgent(AgentBase):
                 tradeoffs=tradeoffs,
                 requirement_analysis=requirement_analyses,
                 notices=list(dict.fromkeys(state.notices)),
+                search_report=state.search_report,
             )
 
             self._finish_run(run, start)

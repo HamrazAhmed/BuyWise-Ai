@@ -96,6 +96,9 @@ class WarrantyAgent(AgentBase):
         seed_candidates = getattr(state, "_seed_candidates", [])
         seed = next((c for c in seed_candidates if c["id"] == product.id), None)
 
+        if seed and seed.get('online'):
+            return Warranty(completeness='unknown'), ReturnPolicy(conditions='No source-backed seller return policy found; confirm before purchase', seller_dependent=True)
+
         if seed and seed.get('market') == 'PK':
             from data.pakistan import RETURN_CONDITIONS
             return (Warranty(duration_months=seed['warranty_months'], coverage=seed['warranty_coverage'], conditions=seed['warranty_conditions'], completeness='partial', source_id=product.id + '__warranty'),

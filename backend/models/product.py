@@ -43,7 +43,7 @@ class Evidence(BaseModel):
     id: str
     product_id: Optional[str] = None
     chunk_id: Optional[str] = None
-    origin: Literal["web", "curated", "fixture"] = "web"
+    origin: Literal["web", "curated", "fixture", "search"] = "web"
     kind: str = "specs"
     source_id: Optional[str] = None
     title: str

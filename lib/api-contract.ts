@@ -9,7 +9,7 @@ export interface WireSpec {
 }
 export interface WireEvidence {
   id: string; product_id: string | null; chunk_id: string | null; source_id: string | null
-  origin: 'web' | 'curated' | 'fixture'; kind: string; title: string; source_url: string
+  origin: 'web' | 'curated' | 'fixture' | 'search'; kind: string; title: string; source_url: string
   source_type: 'primary' | 'secondary'; snippet: string; fetched_at: string
   claims: Array<{ key: string; value: string }>
 }
@@ -33,6 +33,7 @@ export interface WireComparison {
   requirement_analysis: Array<{ requirement: Requirement; product_assessments: Array<{
     product_id: string; match: '✓' | '✕' | '?'; explanation: string; evidence_ids: string[] }> }>
   data_mode: 'live' | 'demo' | 'fixture'; notices: string[]
+  search_report?: Comparison['searchReport'] | null
 }
 export interface WireAnalysis {
   request_id: string; category: string; requirements: Requirement[]; missing_info: string[]
@@ -77,7 +78,7 @@ export function mapComparison(c: WireComparison): Comparison {
       explanation: p.explanation, evidenceIds: p.evidence_ids })) }))
   return { id: c.id, requestId: c.request_id, createdAt: c.created_at, products: c.products.map(mapProduct),
     requirements: c.requirements, requirementMatches: c.requirement_matches, tradeoffs: c.tradeoffs,
-    requirementAnalysis, dataMode: c.data_mode, notices: c.notices }
+    requirementAnalysis, dataMode: c.data_mode, notices: c.notices, searchReport: c.search_report ?? undefined }
 }
 export function mapAnalysis(a: WireAnalysis): AnalyzeRequirementsResponse {
   return { requestId: a.request_id, category: a.category, requirements: a.requirements,

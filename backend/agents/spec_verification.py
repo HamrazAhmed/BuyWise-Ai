@@ -105,6 +105,10 @@ class SpecVerificationAgent(AgentBase):
         if self.llm is None:
             return self._specs_from_seed(product, state)
 
+        seed = next((c for c in getattr(state, '_seed_candidates', []) if c['id'] == product.id), None)
+        if seed and seed.get('online'):
+            return self._specs_from_seed(product, state)
+
         # Retrieve relevant chunks (prefer primary sources)
         chunks = await retrieve(
             query=f"{product.name} specifications CPU RAM storage display battery",
@@ -168,7 +172,7 @@ class SpecVerificationAgent(AgentBase):
                     key=k.replace("_", " ").title(),
                     value=str(v),
                     status=EvidenceStatus.supported,
-                    evidence_ids=[seed.get('source_id', f"seed_{product.id}")],
+                    evidence_ids=seed.get('spec_sources', {}).get(k, [seed.get('source_id', f"seed_{product.id}")]),
                 ))
 
         return specs

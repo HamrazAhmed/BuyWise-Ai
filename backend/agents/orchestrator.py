@@ -102,7 +102,9 @@ async def run_pipeline(
         is_mock = isinstance(llm, MockLLMProvider)
         comparison_id = comparison_id or str(uuid4())
         req_hash = hashlib.sha256(json.dumps({
-            "version": 6, "market": os.getenv('BUYWISE_MARKET', 'PK'), "requirements": _requirements_hash(requirements),
+            "version": 8, "search": os.getenv('BUYWISE_ONLINE_SEARCH', 'true'),
+            "search_model": os.getenv('GEMINI_SEARCH_MODEL', 'gemini-2.5-flash'),
+            "market": os.getenv('BUYWISE_MARKET', 'PK'), "requirements": _requirements_hash(requirements),
             "raw_text": raw_text, "mode": getattr(llm, "data_mode", "demo" if is_mock else "live"),
             "model": getattr(llm, "model", "mock"),
         }, sort_keys=True).encode()).hexdigest()
@@ -168,7 +170,7 @@ async def run_pipeline(
         state = await research_agent.run(state)
 
         if not state.candidate_products:
-            raise RuntimeError("No candidate products found. Try broadening your requirements.")
+            state.notices.append('No source-backed candidates found. Your must-have criteria were retained; edit requirements to try another search.')
 
         # ── Stage 2: Per-product agents (parallel) ────────────────────────────────
         # Agents 3–6 run concurrently per product to minimize latency.
@@ -208,7 +210,9 @@ async def run_pipeline(
             state.comparison.notices = list(dict.fromkeys(state.notices))
 
         # Cache the result
-        _cache_result(req_hash, state.comparison)
+        # A provider outage/quota fallback must not mask a recovered search for an hour.
+        if not any('Online search unavailable' in n for n in state.notices):
+            _cache_result(req_hash, state.comparison)
         if persist: store_comparison(state.comparison)
 
         await state.emit_progress("Research complete", step="done")

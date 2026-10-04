@@ -4,9 +4,9 @@ Agent 2 — Product Research Agent.
 
 Responsibilities:
 - Find 3–5 candidate products matching the requirements.
-- Use seed dataset first; optionally augment with search API results.
+- Search online for Pakistan requests; use the bounded catalog on provider failure.
 - Return candidates with source URLs and metadata.
-- Fallback: if no results, broaden query once; if still none, return seed defaults.
+- Never substitute another brand/GPU/VRAM for a must-have requirement.
 
 PRD §10, §8 (F4)
 """
@@ -86,7 +86,18 @@ def _score_product(product: dict, requirements: list[Requirement]) -> tuple[int,
 def select_candidates(products: list[dict], requirements: list[Requirement],
                       max_candidates: int = 5) -> list[dict]:
     """Score and return the top N seed products for the given requirements."""
-    scored = [(p, _score_product(p, requirements)) for p in products]
+    from agents.matching import canonical_key, match_requirement
+    from models.product import Spec
+    def relevant(product):
+        fields = dict(product.get('specs', {}))
+        if product.get('brand'):
+            fields['brand'] = product['brand']
+        specs = [Spec(key=k, value=str(v), status='supported', evidence_ids=['selection'])
+                 for k, v in fields.items() if v is not None]
+        # Hard identity/chip constraints must not silently broaden into other brands.
+        return all(match_requirement(r, specs)[0] == '✓' for r in requirements
+                   if r.priority == 'must' and canonical_key(r.key) in ('brand', 'gpu', 'vram'))
+    scored = [(p, _score_product(p, requirements)) for p in products if relevant(p)]
     scored.sort(key=lambda x: x[1], reverse=True)
     return [p for p, _ in scored[:max_candidates]]
 
@@ -133,8 +144,7 @@ class ProductResearchAgent(AgentBase):
 
     async def run(self, state: RunState) -> RunState:
         """
-        Find candidate products. Uses seed data filtered by requirements.
-        Future: augment with search API results.
+        Find candidates using grounded online discovery or a clearly labelled catalog fallback.
         """
         run = self._start_run(state)
         start = time.perf_counter()
@@ -148,8 +158,20 @@ class ProductResearchAgent(AgentBase):
             else:
                 import os
                 if os.getenv('BUYWISE_MARKET', 'PK') == 'PK':
-                    from data.pakistan import prepare
-                    seed_products = await prepare(self.llm, state.notices)
+                    online = []
+                    if os.getenv('BUYWISE_ONLINE_SEARCH', 'true').lower() == 'true' and callable(getattr(self.llm, 'search_web', None)):
+                        from data.online import discover
+                        await state.emit_progress('Searching online sources for your confirmed requirements', step='search')
+                        online, state.search_report = await discover(self.llm, state.requirements, state.notices)
+                    if online:
+                        seed_products = online
+                    elif state.search_report:
+                        # A successful search with no validated match is a valid result.
+                        seed_products = []
+                        state.notices.append('No validated online candidates match this request. Review the cited search overview or edit your requirements; unrelated seed laptops were not substituted.')
+                    else:
+                        from data.pakistan import prepare
+                        seed_products = await prepare(self.llm, state.notices)
                 else:
                     seed_products = _load_seed()
             if not seed_products:
@@ -166,8 +188,7 @@ class ProductResearchAgent(AgentBase):
 
             if not candidates:
                 logger.warning("No seed candidates matched requirements")
-                # Fallback: return top 3 from seed regardless
-                candidates = seed_products[:3]
+                state.notices.append('No source-backed candidates satisfy the requested brand/GPU/VRAM constraints. These requirements were not relaxed; try another model or enable online discovery.')
 
             logger.info(
                 "ProductResearchAgent: selected %d candidates from seed dataset",

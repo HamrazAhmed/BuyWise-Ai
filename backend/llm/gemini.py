@@ -109,7 +109,7 @@ class GeminiProvider(LLMProvider):
             self._client.close()
             self._client = None
 
-    async def _request(self, operation):
+    async def _request(self, operation, *, timeout=TIMEOUT_SECONDS):
         client = self._get_client()
         loop = asyncio.get_running_loop()
         if loop not in _slots:
@@ -120,7 +120,7 @@ class GeminiProvider(LLMProvider):
             else:
                 _check_quota(self._api_key)
             try:
-                return await asyncio.wait_for(operation(client), timeout=TIMEOUT_SECONDS + 1)
+                return await asyncio.wait_for(operation(client), timeout=timeout + 1)
             except LLMError:
                 raise
             except Exception as error:
@@ -180,6 +180,26 @@ class GeminiProvider(LLMProvider):
 
     async def embed(self, text: str) -> list[float]:
         return (await self.embed_batch([text]))[0]
+
+    async def search_web(self, prompt: str):
+        """One bounded, quota-counted Google Search call; no retry storm on 429."""
+        from google.genai import types
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_RULES,
+            tools=[types.Tool(google_search=types.GoogleSearch())],
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            max_output_tokens=3500, temperature=0.0,
+            http_options=types.HttpOptions(timeout=45000),
+        )
+        response = await self._request(lambda client: client.aio.models.generate_content(
+            model=os.getenv('GEMINI_SEARCH_MODEL', 'gemini-2.5-flash'),
+            contents=prompt, config=config), timeout=45)
+        if not response.candidates:
+            raise LLMSchemaError('Search returned no candidate response.')
+        metadata = response.candidates[0].grounding_metadata
+        if not metadata or not metadata.grounding_chunks or not metadata.grounding_supports:
+            raise LLMSchemaError('Search returned no attributable grounding evidence.')
+        return {'text': response.text or '', 'metadata': metadata.model_dump(mode='json')}
 
     async def embed_query(self, text: str) -> list[float]:
         return (await self._embed([text], "RETRIEVAL_QUERY"))[0]

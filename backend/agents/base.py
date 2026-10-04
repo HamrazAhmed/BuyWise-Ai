@@ -53,6 +53,7 @@ class RunState:
     status: str = ShoppingRequestStatus.pending
     error: Optional[str] = None
     notices: list[str] = field(default_factory=list)
+    search_report: Optional[dict] = None
 
     # SSE progress callback (set by orchestrator)
     _progress_callback: Optional[Any] = field(default=None, repr=False)

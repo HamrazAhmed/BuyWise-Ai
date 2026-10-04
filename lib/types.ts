@@ -19,7 +19,7 @@ export interface Evidence {
   productId?: string
   chunkId?: string
   sourceId?: string
-  origin?: 'web' | 'curated' | 'fixture'
+  origin?: 'web' | 'curated' | 'fixture' | 'search'
   kind?: string
   claims?: Array<{ key: string; value: string }>
   /** Human-readable title of the source document. */
@@ -201,6 +201,7 @@ export interface Comparison {
   requirements?: Requirement[]
   dataMode?: 'live' | 'demo' | 'fixture'
   notices?: string[]
+  searchReport?: { status: string; summary: string; sources: Array<{url: string; title: string}>; suggestions_html: string }
 }
 
 export interface RequirementAnalysis {
