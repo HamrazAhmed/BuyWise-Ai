@@ -118,6 +118,9 @@ def match_requirement(req: Requirement, specs: list[Spec]) -> tuple[str, str, li
         # A GPU model identifies the chip, not the vendor prefix or VRAM suffix.
         chip = r'\b(?:rtx|gtx|rx|arc)\s*[- ]?\s*\d{3,4}(?:\s*(?:ti|super))?\b'
         actual_chip, wanted_chip = re.search(chip, value), re.search(chip, wanted)
+        if actual_chip and not wanted_chip and re.fullmatch(r"\d{3,4}", wanted):
+            met = re.fullmatch(r"(?:rtx|gtx|rx|arc)\s*[- ]?\s*" + re.escape(wanted), actual_chip[0]) is not None
+            return ("✓" if met else "✕"), f"{req.key}: {spec.value}; requested {req.value}", evidence
         if actual_chip and wanted_chip:
             met = re.sub(r'\s|-', '', actual_chip[0]) == re.sub(r'\s|-', '', wanted_chip[0])
             return ('✓' if met else '✕'), f'{req.key}: {spec.value}; requested {req.value}', evidence

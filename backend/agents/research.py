@@ -6,7 +6,7 @@ Responsibilities:
 - Find 3–5 candidate products matching the requirements.
 - Search online for Pakistan requests; use the bounded catalog on provider failure.
 - Return candidates with source URLs and metadata.
-- Never substitute another brand/GPU/VRAM for a must-have requirement.
+- Show related online alternatives with their requirement gaps retained in comparison.
 
 PRD §10, §8 (F4)
 """
@@ -84,7 +84,7 @@ def _score_product(product: dict, requirements: list[Requirement]) -> tuple[int,
 
 
 def select_candidates(products: list[dict], requirements: list[Requirement],
-                      max_candidates: int = 5) -> list[dict]:
+                      max_candidates: int = 5, allow_near_matches: bool = False) -> list[dict]:
     """Score and return the top N seed products for the given requirements."""
     from agents.matching import canonical_key, match_requirement
     from models.product import Spec
@@ -94,7 +94,11 @@ def select_candidates(products: list[dict], requirements: list[Requirement],
             fields['brand'] = product['brand']
         specs = [Spec(key=k, value=str(v), status='supported', evidence_ids=['selection'])
                  for k, v in fields.items() if v is not None]
-        # Hard identity/chip constraints must not silently broaden into other brands.
+        if allow_near_matches:
+            technical = [r for r in requirements if canonical_key(r.key) in
+                         ("brand", "cpu", "gpu", "vram", "ram", "storage", "display")]
+            return not technical or any(match_requirement(r, specs)[0] == "✓" for r in technical)
+        # Catalog fallbacks retain strict identity constraints.
         return all(match_requirement(r, specs)[0] == '✓' for r in requirements
                    if r.priority == 'must' and canonical_key(r.key) in ('brand', 'gpu', 'vram'))
     scored = [(p, _score_product(p, requirements)) for p in products if relevant(p)]
@@ -184,7 +188,11 @@ class ProductResearchAgent(AgentBase):
                 seed_products,
                 state.requirements,
                 max_candidates=5,
+                allow_near_matches=all(p.get("online") for p in seed_products),
             )
+
+            if candidates and all(p.get("online") for p in candidates):
+                state.notices.append("Candidates include related alternatives, not guaranteed exact matches. The comparison marks every confirmed match, mismatch and unknown; must-have gaps remain visible.")
 
             if not candidates:
                 logger.warning("No seed candidates matched requirements")

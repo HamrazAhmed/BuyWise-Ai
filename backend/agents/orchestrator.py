@@ -102,7 +102,7 @@ async def run_pipeline(
         is_mock = isinstance(llm, MockLLMProvider)
         comparison_id = comparison_id or str(uuid4())
         req_hash = hashlib.sha256(json.dumps({
-            "version": 8, "search": os.getenv('BUYWISE_ONLINE_SEARCH', 'true'),
+            "version": 9, "search": os.getenv('BUYWISE_ONLINE_SEARCH', 'true'),
             "search_model": os.getenv('GEMINI_SEARCH_MODEL', 'gemini-2.5-flash'),
             "market": os.getenv('BUYWISE_MARKET', 'PK'), "requirements": _requirements_hash(requirements),
             "raw_text": raw_text, "mode": getattr(llm, "data_mode", "demo" if is_mock else "live"),

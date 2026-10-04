@@ -85,6 +85,8 @@ class ComparisonAgent(AgentBase):
                 total_weight = sum(weights[r.priority] for r in state.requirements)
                 product.weighted_match_score = sum(weights[r.priority] for r, m in zip(state.requirements, matches) if m == "✓") / total_weight if total_weight else 0
 
+                product.score = f"{round(product.weighted_match_score * 100)}% confirmed match · {met} of {total} requirements met"
+
                 # Add verified specs to product
                 product.specs = specs
 
