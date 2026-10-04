@@ -1,119 +1,85 @@
-import sys
+"""Secondary UI using the same server provider and typed comparison models."""
 import asyncio
-import streamlit as st
 import os
-import uuid
-
-# Ensure the backend directory is in the path
+import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent))
 
+import streamlit as st
+
+sys.path.insert(0, str(Path(__file__).parent))
 from agents.requirement import RequirementAgent
 from agents.orchestrator import run_pipeline
-from llm.gemini import GeminiProvider, MockLLMProvider
+from llm.gemini import get_llm_provider
+from llm.base import LLMError
 
 st.set_page_config(page_title="BuyWise AI", page_icon="🛍️", layout="wide")
-
-st.title("🛍️ BuyWise AI")
-st.subheader("Your AI-powered shopping assistant")
-
-# Initialize session state
-if "gemini_api_key" not in st.session_state:
-    st.session_state.gemini_api_key = ""
-
-# Sidebar for API Key
+st.title("BuyWise AI")
+st.subheader("Evidence-backed shopping comparisons")
 with st.sidebar:
-    st.header("⚙️ Settings")
-    st.session_state.gemini_api_key = st.text_input(
-        "Gemini API Key", 
-        type="password", 
-        value=st.session_state.gemini_api_key,
-        help="Get your free key at aistudio.google.com"
-    )
-    if not st.session_state.gemini_api_key:
-        st.warning("⚠️ Enter your Gemini API key to use live AI. Otherwise, it will use mock data.")
+    st.header("Settings")
+    # Credentials belong to the server, not shared process env mutated by users.
+    st.info("Gemini uses the server's GEMINI_API_KEY setting.")
+    if not os.getenv("GEMINI_API_KEY"):
+        st.warning("No server key configured. Results are canned demo data.")
 
-# Main search bar
-query = st.text_input(
-    "What are you looking for?", 
-    placeholder="e.g., I need a laptop under $1,000 for cybersecurity. I use Linux and run multiple VMs. I want at least 32GB RAM."
-)
+query = st.text_input("What are you looking for?", placeholder="A laptop under $1,000 with 32GB RAM for Linux")
 
-async def _do_research(prompt: str, api_key: str):
-    # Set environment variable so get_llm_provider() in orchestrator.py picks it up
-    if api_key:
-        os.environ["GEMINI_API_KEY"] = api_key
-    elif "GEMINI_API_KEY" in os.environ:
-        del os.environ["GEMINI_API_KEY"]
-
-    llm = GeminiProvider(api_key=api_key) if api_key else MockLLMProvider()
-    
-    with st.status("🧠 Understanding requirements...", expanded=True) as status:
-        req_agent = RequirementAgent(llm=llm)
-        try:
-            req_res = await req_agent.run(prompt)
-        except Exception:
-            # Fallback to mock if LLM fails (e.g. no key)
-            from agents.requirement import _DEMO_REQUIREMENTS
-            from models.request import RequirementAnalysisResponse
-            req_res = RequirementAnalysisResponse(
-                category="laptop",
-                requirements=_DEMO_REQUIREMENTS,
-                request_id=str(uuid.uuid4())
-            )
-            
-        st.write("✅ Requirements Extracted")
-        
-        # This callback receives the SSE dictionary
-        async def on_progress(event):
-            st.write(f"✅ {event['message']}")
-            
-        status.update(label="🔍 Researching products...", state="running")
-        
-        comparison = await run_pipeline(
-            request_id=req_res.request_id,
-            requirements=req_res.requirements,
-            raw_text=prompt,
-            progress_callback=on_progress
-        )
-        
-        status.update(label="Research Complete!", state="complete", expanded=False)
-        
-    return req_res, comparison
-
-if st.button("Search", type="primary") and query:
+async def _do_research(prompt):
+    agent = RequirementAgent(llm=get_llm_provider())
     try:
-        req_res, comparison = asyncio.run(_do_research(query, st.session_state.gemini_api_key))
-        
-        st.success(f"Found {len(comparison.products)} perfect matches for you!")
-        
-        with st.expander("📝 Extracted Requirements"):
-            for req in req_res.requirements:
-                st.write(f"- **{req.key.title()}**: {req.operator} {req.value} *(Priority: {req.priority.value})*")
-        
-        st.divider()
-        
+        requirements = await agent.run(prompt)
+    except LLMError:
+        requirements = await agent.run_mock(prompt)
+    finally:
+        if hasattr(agent.llm, "aclose"):
+            await agent.llm.aclose()
+    if requirements.category == "unsupported":
+        return requirements, None
+    comparison = await run_pipeline(requirements.request_id, requirements.requirements, raw_text=prompt)
+    return requirements, comparison
+
+if st.button("Search", type="primary"):
+    if not 10 <= len(query.strip()) <= 1000:
+        st.warning("Describe your needs in 10–1000 characters.")
+    else:
+        try:
+            with st.spinner("Researching products..."):
+                st.session_state['result'] = asyncio.run(_do_research(query.strip()))
+        except Exception:
+            st.error("Research unavailable. Check server logs or retry.")
+
+if 'result' in st.session_state:
+    requirements, comparison = st.session_state['result']
+    for notice in requirements.notices:
+        st.warning(notice)
+    if comparison is None:
+        for question in requirements.missing_info:
+            st.warning(question)
+    else:
+        for notice in comparison.notices:
+            st.warning(notice)
+        st.success(f"Compared {len(comparison.products)} candidates.")
+        with st.expander("Requirements used in this comparison"):
+            for req in comparison.requirements:
+                st.write(f"{req.key}: {req.operator} {req.value} ({req.priority.value})")
         if comparison.products:
-            cols = st.columns(len(comparison.products))
-            for i, result in enumerate(comparison.products):
-                with cols[i]:
-                    st.subheader(result.product.name)
-                    st.write(f"**Score:** {result.score_out_of_10}/10")
-                    
-                    st.write("### Specs")
-                    for k, v in result.product.specs.items():
-                        if v:
-                            st.write(f"- **{k.replace('_', ' ').title()}**: {v}")
-                    
-                    st.write("### AI Analysis")
-                    st.info(result.summary)
-                    
-                    st.write("### Pros & Cons")
-                    for pro in result.pros:
-                        st.write(f"✅ {pro}")
-                    for con in result.cons:
-                        st.write(f"❌ {con}")
-        else:
-            st.warning("No products found matching those strict requirements.")
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+            for column, product in zip(st.columns(len(comparison.products)), comparison.products):
+                with column:
+                    st.subheader(product.name)
+                    st.write(product.score)
+                    st.caption(f"Must-haves: {product.must_have_status}")
+                    if product.price_info and product.price_info.amount is not None:
+                        st.write(f"Listed price: {product.price_info.amount:g} {product.price_info.currency}")
+                    else:
+                        st.write("Price unknown")
+                    st.write("### Specifications")
+                    for spec in product.specs:
+                        st.write(f"{spec.key}: {spec.value} ({spec.status.value})")
+                    st.write("### Strengths and limits")
+                    for text in product.pros:
+                        st.write(f"✓ {text}")
+                    for text in product.limitations:
+                        st.write(f"• {text}")
+        for tradeoff in comparison.tradeoffs:
+            st.info(tradeoff)
+        st.caption("Prices and availability change. Verify retailer terms before purchase.")
