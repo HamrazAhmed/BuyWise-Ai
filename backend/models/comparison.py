@@ -3,10 +3,11 @@ backend/models/comparison.py
 Pydantic schemas for Comparison and AgentRun entities.
 """
 
-from typing import Any, Optional
+from typing import Optional, Literal
 from datetime import datetime, timezone
 from uuid import uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from .product import Product
 from .request import Requirement
 
 
@@ -18,7 +19,7 @@ class RequirementMatch(str):
 class ProductAssessment(BaseModel):
     """How a single product performs on a single requirement."""
     product_id: str
-    match: str  # '✓' | '✕' | '?'
+    match: Literal["✓", "✕", "?"]
     explanation: str
     evidence_ids: list[str] = Field(default_factory=list)
 
@@ -40,7 +41,10 @@ class Comparison(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     # Snapshot of all products compared
-    products: list[Any] = Field(default_factory=list)  # list[Product]
+    products: list[Product] = Field(default_factory=list)
+    requirements: list[Requirement] = Field(default_factory=list)
+    data_mode: Literal["live", "demo", "fixture"] = "live"
+    notices: list[str] = Field(default_factory=list)
     # {product_id: ['✓', '✓', '✕', '?', ...]} — one entry per requirement
     requirement_matches: dict[str, list[str]] = Field(default_factory=dict)
     # Key trade-off sentences for the "Key differences" card
@@ -53,8 +57,13 @@ class Comparison(BaseModel):
 
 class FollowUpRequest(BaseModel):
     """POST /api/follow-up — request body."""
-    comparison_id: str
-    question: str = Field(..., min_length=1, max_length=500)
+    comparison_id: str = Field(min_length=1, max_length=100)
+    question: str = Field(min_length=1, max_length=500)
+
+    @field_validator("comparison_id", "question", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 class FollowUpResponse(BaseModel):

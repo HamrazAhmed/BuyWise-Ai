@@ -4,7 +4,7 @@ Pydantic schemas for ShoppingRequest and Requirement entities.
 """
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, Literal
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field, field_validator
@@ -33,12 +33,17 @@ class Requirement(BaseModel):
     # Canonical key (e.g. 'budget', 'ram', 'os_compatibility')
     key: str = Field(..., min_length=1, max_length=100)
     # Comparison operator (e.g. '<=', '>=', '=', 'supports')
-    operator: str = Field(..., min_length=1, max_length=20)
+    operator: Literal["<=", "<", ">=", ">", "=", "==", "supports", "contains"]
     # Value string (e.g. '1000 USD', '32 GB', 'Linux')
     value: str = Field(..., min_length=1, max_length=200)
     priority: Priority
     source: RequirementSource = RequirementSource.user
     confirmed: bool = False
+
+    @field_validator("key", "value", mode="before")
+    @classmethod
+    def strip_fields(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 class AnalyzeRequirementsRequest(BaseModel):
@@ -46,10 +51,10 @@ class AnalyzeRequirementsRequest(BaseModel):
     text: str = Field(..., min_length=10, max_length=1000,
                       description="Natural-language shopping request (10–1000 chars).")
 
-    @field_validator("text")
+    @field_validator("text", mode="before")
     @classmethod
     def strip_text(cls, v: str) -> str:
-        return v.strip()
+        return v.strip() if isinstance(v, str) else v
 
 
 class AnalyzeRequirementsResponse(BaseModel):
@@ -59,6 +64,8 @@ class AnalyzeRequirementsResponse(BaseModel):
     requirements: list[Requirement]
     # Clarifying questions to present to the user (0–3)
     missing_info: list[str] = Field(default_factory=list)
+    data_mode: Literal["live", "demo", "fixture"] = "live"
+    notices: list[str] = Field(default_factory=list)
 
 
 class ShoppingRequestStatus(str, Enum):

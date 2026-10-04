@@ -37,7 +37,7 @@ class LLMProvider(ABC):
         """
         Generate a structured JSON response validated against `schema`.
         - Must retry once on transient failure (see PRD §13).
-        - Must use exponential backoff on 429 (rate limit).
+        - Honor upstream rate-limit waits; retry short waits once and surface long/exhausted quota waits.
         - Must raise LLMError on unrecoverable failure.
         """
         ...
@@ -64,6 +64,10 @@ class LLMProvider(ABC):
         Used by the RAG service for chunk embedding and retrieval.
         """
         ...
+
+    async def embed_query(self, text: str) -> list[float]:
+        """Query embedding; override when a provider supports task-specific vectors."""
+        return await self.embed(text)
 
     @abstractmethod
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:

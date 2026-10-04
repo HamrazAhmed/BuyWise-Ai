@@ -3,8 +3,9 @@ backend/models/product.py
 Pydantic schemas for Product, Spec, Evidence, and related entities.
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Optional, Literal
+from pydantic import BaseModel, Field, field_validator
+from .request import Requirement
 from .common import EvidenceStatus
 
 
@@ -29,17 +30,27 @@ class Spec(BaseModel):
     conflicting_values: list[ConflictingValue] = Field(default_factory=list)
 
 
+class SourceClaim(BaseModel):
+    key: str
+    value: str
+
+
 class Evidence(BaseModel):
     """
     A piece of evidence backing a specific claim.
     Maps to the Evidence entity in the data model.
     """
     id: str
+    product_id: Optional[str] = None
+    chunk_id: Optional[str] = None
+    origin: Literal["web", "curated", "fixture"] = "web"
+    kind: str = "specs"
     source_id: Optional[str] = None
     title: str
     source_url: str
     source_type: str  # 'primary' | 'secondary'
-    snippet: str       # Short excerpt; stored for citation display
+    claims: list[SourceClaim] = Field(default_factory=list)
+    snippet: str       # Sanitized source excerpt; stored for citation display
     fetched_at: str    # ISO date string
 
 
@@ -74,7 +85,7 @@ class ReturnPolicy(BaseModel):
 
 class PriceInfo(BaseModel):
     """Price data with timestamp, extracted by Agent 6."""
-    amount: Optional[float] = None  # null if unknown or stale
+    amount: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)  # null if unknown
     currency: str = "USD"
     seller: Optional[str] = None
     fetched_at: Optional[str] = None  # ISO datetime string
@@ -101,6 +112,7 @@ class Product(BaseModel):
 
     # Agents 3–6 output
     specs: list[Spec] = Field(default_factory=list)
+    evidence: list[Evidence] = Field(default_factory=list)
     review_themes: list[ReviewTheme] = Field(default_factory=list)
     warranty: Optional[Warranty] = None
     return_policy: Optional[ReturnPolicy] = None
@@ -109,12 +121,20 @@ class Product(BaseModel):
     # Shorthand pros/limitations for the card view
     pros: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
+    must_have_status: Literal["met", "not_met", "uncertain"] = "uncertain"
+    weighted_match_score: float = 0.0
 
 
 class ResearchProductsRequest(BaseModel):
     """POST /api/research-products — request body."""
-    request_id: str
-    requirements: list = Field(default_factory=list)  # list[Requirement] — validated at route level
+    request_id: str = Field(min_length=1, max_length=100)
+    requirements: list[Requirement] = Field(min_length=1, max_length=20)
+    raw_text: str = Field(default="", max_length=1000)
+
+    @field_validator("request_id", "raw_text", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
 
 
 class ResearchProductsResponse(BaseModel):
@@ -126,5 +146,23 @@ class ResearchProductsResponse(BaseModel):
 
 class CompareProductsRequest(BaseModel):
     """POST /api/compare-products — request body."""
-    request_id: str
-    product_ids: list[str] = Field(..., min_length=2, max_length=5)
+    request_id: str = Field(min_length=1, max_length=100)
+    product_ids: list[str] = Field(min_length=2, max_length=5)
+    comparison_id: Optional[str] = None
+
+    @field_validator("request_id", "comparison_id", mode="before")
+    @classmethod
+    def strip_id(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        raise ValueError("Identifier cannot be empty")
+
+    @field_validator("product_ids")
+    @classmethod
+    def validate_ids(cls, values):
+        values = [value.strip() for value in values]
+        if any(not value or len(value) > 100 for value in values) or len(set(values)) != len(values):
+            raise ValueError("Product identifiers must be nonempty and unique")
+        return values
