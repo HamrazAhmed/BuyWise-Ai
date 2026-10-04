@@ -15,7 +15,7 @@ def normalized(key, value):
     if canonical == 'budget':
         parsed = money(text)
         if parsed: return ('money', round(parsed[0], 8), parsed[1])
-    if canonical in ('ram','storage','weight','display','budget'):
+    if canonical in ('ram','vram','storage','weight','display','budget'):
         if re.fullmatch(r'\d+(?:\.\d+)?',text):
             unit=key.lower().replace('_',' ').split()[-1]
             if unit in ('gb','tb','kg','lbs','inches'): text+=' '+unit

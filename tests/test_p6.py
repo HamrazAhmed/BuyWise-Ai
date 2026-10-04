@@ -162,7 +162,7 @@ class P6Tests(unittest.IsolatedAsyncioTestCase):
         html = '<h1>HP Victus FA2013DX</h1><div class="product-info-main"><meta itemprop="priceCurrency" content="PKR"><span data-price-type="finalPrice" data-price-amount="240000"></span></div><table id="product-attribute-specs-table"><tr><th>Installed RAM</th><td>8 GB</td></tr></table><div data-price-amount="1">Related laptop</div>'
         doc = FetchedDocument(url=p['canonical_url'], text=html, fetched_at='2026-10-04T00:00:00Z')
         parsed = parse_listing(doc, p)
-        self.assertEqual(parsed['amount'], 240000); self.assertEqual(parsed['specs'], {'ram': '8 GB'})
+        self.assertEqual(parsed['amount'], 240000); self.assertEqual(parsed['specs'], {'ram': '8 GB', 'brand': 'HP'})
         self.assertIsNone(parse_listing(FetchedDocument(url=p['canonical_url'], text=html.replace('FA2013DX', 'OTHER'), fetched_at=doc.fetched_at), p))
         self.assertIsNone(parse_listing(FetchedDocument(url='https://www.paklap.pk/other', text=html, fetched_at=doc.fetched_at), p))
         for altered in [html.replace('content="PKR"', 'content="USD"'), html.replace('data-price-type="finalPrice"', 'data-price-type="unrelated"')]:

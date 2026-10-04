@@ -23,7 +23,20 @@ def catalog():
         if p['market'] != 'PK' or p['currency'] != 'PKR' or not p['canonical_url'].startswith('https://www.paklap.pk/'):
             raise ValueError('Invalid regional catalog record')
         p['source_id'] = p['id'] + '__listing'
+        p['specs'] = identity_specs(p)
     return products
+
+
+def identity_specs(product):
+    """Expose listed identity and explicit GPU memory; never infer missing VRAM."""
+    specs = dict(product.get('specs', {}))
+    if product.get('brand'):
+        specs['brand'] = product['brand']
+    gpu = str(specs.get('gpu') or '')
+    memory = re.search(r'\b(\d+(?:\.\d+)?)\s*GB\b', gpu, re.I)
+    if memory:
+        specs['vram'] = memory[1] + ' GB'
+    return specs
 
 
 def parse_listing(document, product):
@@ -67,6 +80,8 @@ def parse_listing(document, product):
     if not fields:
         return None
     result = dict(product, specs=fields, amount=amount, observed_at=document.fetched_at, origin='web')
+    # The validated exact-SKU heading confirms identity; the GPU field gives VRAM.
+    result['specs'] = identity_specs(result)
     if fields.get('os') and re.search(r'\bDOS\b', soup.get_text(' ', strip=True), re.I) and 'DOS' not in fields['os'].upper():
         result['specs']['os'] = None
     # A refreshed product page does not refresh its cached warranty/policy facts.
@@ -116,6 +131,7 @@ async def prepare(llm, notices):
             p['specs'] = {c['key']: c['value'] for c in listing.claims if c['key'] != 'budget'}
             recorded = next((money(c['value']) for c in listing.claims if c['key'] == 'budget'), None)
             p.update(amount=recorded[0] if recorded else None, observed_at=listing.fetched_at, origin='web')
+            p['specs'] = identity_specs(p)
         if refresh and not fresh:
             document = await fetch_document(p['canonical_url'], HOSTS, 5) if robots and robots.can_fetch('BuyWiseAI', p['canonical_url']) else None
             updated = parse_listing(document, p) if document else None

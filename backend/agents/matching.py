@@ -16,6 +16,9 @@ ALIASES = {
     'ram upgradeable': 'upgradeability', 'upgradeable': 'upgradeability',
     'weight lbs': 'weight', 'weight kg': 'weight',
     'display inches': 'display', 'screen size': 'display',
+    'graphics': 'gpu', 'graphics card': 'gpu', 'graphics processor': 'gpu',
+    'video memory': 'vram', 'gpu memory': 'vram', 'vram gb': 'vram',
+    'manufacturer': 'brand',
 }
 
 
@@ -49,6 +52,7 @@ def quantity(value: str, key: str):
     units = {
         'budget': {'': 1, 'usd': 1},
         'ram': {'': 1, 'gb': 1, 'gib': 1.073741824, 'tb': 1000, 'tib': 1099.511627776, 'mb': .001},
+        'vram': {'': 1, 'gb': 1, 'gib': 1.073741824, 'mb': .001},
         'storage': {'': 1, 'gb': 1, 'gib': 1.073741824, 'tb': 1000, 'tib': 1099.511627776, 'mb': .001},
         'weight': {'kg': 1, 'g': .001, 'lbs': .45359237, 'lb': .45359237},
         'display': {'inches': 1, 'inch': 1, 'in': 1, '"': 1},
@@ -70,7 +74,7 @@ def match_requirement(req: Requirement, specs: list[Spec]) -> tuple[str, str, li
     value = spec.value.lower().strip()
     if spec.status == 'insufficient' or not evidence or value in ('', 'none', 'null') or re.search(r'\b(unknown|unconfirmed|unclear)\b|not found', value):
         return '?', f"'{req.key}' could not be confirmed", evidence
-    if key in ('budget', 'ram', 'storage', 'weight', 'display'):
+    if key in ('budget', 'ram', 'vram', 'storage', 'weight', 'display'):
         actual_text = value
         # Bare seed numbers have units encoded in their keys.
         if re.fullmatch(r'\d+(?:\.\d+)?', value):
@@ -110,6 +114,13 @@ def match_requirement(req: Requirement, specs: list[Spec]) -> tuple[str, str, li
             return '✓', f'{req.key}: {spec.value}', evidence
         return '?', f"'{req.key}' could not be confirmed", evidence
 
+    if key == 'gpu' and req.operator in ('=', '==', 'contains'):
+        # A GPU model identifies the chip, not the vendor prefix or VRAM suffix.
+        chip = r'\b(?:rtx|gtx|rx|arc)\s*[- ]?\s*\d{3,4}(?:\s*(?:ti|super))?\b'
+        actual_chip, wanted_chip = re.search(chip, value), re.search(chip, wanted)
+        if actual_chip and wanted_chip:
+            met = re.sub(r'\s|-', '', actual_chip[0]) == re.sub(r'\s|-', '', wanted_chip[0])
+            return ('✓' if met else '✕'), f'{req.key}: {spec.value}; requested {req.value}', evidence
     if req.operator in ('=', '=='):
         met = value == wanted
     elif req.operator in ('contains', 'supports'):
