@@ -15,7 +15,8 @@ from llm.base import LLMRateLimitError
 SEARCH_DOMAINS = {'vertexaisearch.cloud.google.com', 'dell.com', 'hp.com', 'lenovo.com',
                  'asus.com', 'acer.com', 'msi.com', 'apple.com', 'gigabyte.com',
                  'paklap.pk', 'czone.com.pk', 'mega.pk', 'galaxy.pk', 'eezepc.com',
-                 'shophive.com', 'telemart.pk', 'notebookcheck.net', 'rtings.com'}
+                 'shophive.com', 'telemart.pk', 'notebookcheck.net', 'rtings.com',
+                 'laptophouse.pk', 'techglobe.pk'}
 FACT_KEYS = {'brand', 'cpu', 'gpu', 'vram', 'ram', 'storage', 'display', 'weight',
              'os', 'battery', 'ports', 'upgradeability', 'budget'}
 
@@ -57,7 +58,12 @@ def source_segments(result):
                 continue
             web = sources[index].get('web') or {}
             uri = web.get('uri', '')
-            if allowed_url(uri, SEARCH_DOMAINS):
+            title = str(web.get('title') or '').lower().strip()
+            # Google redirects conceal the destination; require an approved source title.
+            redirect = urlsplit(uri).hostname == 'vertexaisearch.cloud.google.com'
+            approved_title = any(title == d or title.endswith('.' + d) for d in SEARCH_DOMAINS
+                                 if d != 'vertexaisearch.cloud.google.com')
+            if allowed_url(uri, SEARCH_DOMAINS) and (not redirect or approved_title):
                 citations.append({'url': uri, 'title': str(web.get('title') or 'Google Search source')[:180]})
         if citations:
             records.append({'text': text, 'sources': citations})
@@ -125,7 +131,7 @@ def checked_products(output, segments):
 async def discover(llm, requirements, notices):
     criteria = [{'key': r.key, 'operator': r.operator, 'value': r.value, 'priority': r.priority} for r in requirements]
     prompt = ('Search current online sources for laptops available in Pakistan matching these confirmed criteria: '
-              + json.dumps(criteria) + '. Find up to five exact laptop models. Do not relax must-have brand/GPU/VRAM. '
+              + json.dumps(criteria) + '. Find up to five distinct laptop configurations. Prefer exact matches; otherwise find the closest alternatives and explicitly state missing requirements. Never describe a partial match as exact. Search product listings rather than exchange rates. Do not convert currencies or infer Linux/virtualization support from series names. '
               'Prefer manufacturer and Pakistan retailer sources. Each factual sentence must repeat the full brand/model '
               'and state one labelled fact: brand, CPU, GPU, VRAM, RAM, storage, weight, display or PKR price. '
               'Cite every factual sentence. Distinguish exact configurations. Do not invent availability, prices or model names. '
