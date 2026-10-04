@@ -34,3 +34,11 @@ Run backend checks with `.venv/bin/python -m unittest discover -s tests -q` and 
 Backend code lives in `backend/`; UI in `app/` and `lib/`; regression/browser checks in `tests/` and `scripts/`. Internal planning and reports stay local and are ignored by Git.
 
 MIT — see LICENSE.
+
+## Free staging on Render
+
+`render.yaml` defines two free web services: Next.js and FastAPI with an inline worker. Connect this repository through Render's Blueprint flow. Supply `DATABASE_URL` and the testing `GEMINI_API_KEY` only to the API; set `ALLOWED_ORIGIN` to the frontend HTTPS origin and `NEXT_PUBLIC_API_URL` to the API HTTPS origin. If Render assigns different URLs, update those values and rebuild the frontend.
+
+Both services sleep after inactivity and share the workspace's free instance-hour allowance. Cold starts can exceed the frontend request timeout; open the API's `/api/ready` endpoint and wait until it responds before testing. Queued jobs resume only while the API is awake. This is a staging setup with no dedicated worker or uptime guarantee. Gemini usage and Supabase remain subject to their own quotas/billing. No paid resource is declared.
+
+For client production, review hosting separately, restore a persistent standalone worker, rotate the database password and install the separate production Gemini key before release.
