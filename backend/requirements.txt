@@ -5,11 +5,12 @@
 # ─── Core framework ───────────────────────────────────────────────────────────
 fastapi==0.115.12
 uvicorn[standard]==0.34.3
-pydantic==2.11.4
+pydantic==2.13.5
 python-dotenv==1.1.0
+psycopg[binary]==3.3.6
 
 # ─── Google Generative AI (Gemini) ───────────────────────────────────────────
-google-generativeai==0.8.5
+google-genai==2.28.0
 
 # ─── HTTP / scraping ──────────────────────────────────────────────────────────
 httpx==0.28.1                 # async HTTP client for source fetching
