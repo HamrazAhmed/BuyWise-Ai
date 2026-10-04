@@ -1,0 +1,50 @@
+# Free staging only: both services sleep when idle and share workspace free hours.
+# Supply secrets and the actual frontend/API URLs in Render's Blueprint prompts.
+services:
+  - type: web
+    name: buywise-api-staging
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/ready
+    envVars:
+      - key: BUYWISE_MODE
+        value: gemini
+      - key: BUYWISE_MARKET
+        value: PK
+      - key: BUYWISE_INLINE_WORKER
+        value: "true"
+      - key: BUYWISE_SOURCE_REFRESH
+        value: "true"
+      - key: GEMINI_FAST_MODEL
+        value: gemini-3.1-flash-lite
+      - key: GEMINI_STRONG_MODEL
+        value: gemini-3.1-flash-lite
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_DAILY_CALL_LIMIT
+        value: "100"
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGIN
+        sync: false
+  - type: web
+    name: buywise-web-staging
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: npm install -g pnpm@12.3.4 && pnpm install --frozen-lockfile && pnpm exec next build --webpack
+    startCommand: node node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: 24.20.0
+      - key: NEXT_PUBLIC_USE_MOCKS
+        value: "false"
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
