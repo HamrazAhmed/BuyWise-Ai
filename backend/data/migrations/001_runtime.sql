@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS bw_migrations (version INTEGER PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS bw_requests (id TEXT PRIMARY KEY, body JSON NOT NULL, saved_at DOUBLE PRECISION NOT NULL);
+CREATE TABLE IF NOT EXISTS bw_comparisons (id TEXT PRIMARY KEY, request_id TEXT NOT NULL, body JSON NOT NULL, saved_at DOUBLE PRECISION NOT NULL);
+CREATE INDEX IF NOT EXISTS bw_comparisons_request ON bw_comparisons(request_id, saved_at);
+CREATE TABLE IF NOT EXISTS bw_jobs (id TEXT PRIMARY KEY, body JSON NOT NULL, status TEXT NOT NULL CHECK (status IN ('queued','running','done','error')), owner TEXT, lease_until DOUBLE PRECISION NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, created_at DOUBLE PRECISION NOT NULL, updated_at DOUBLE PRECISION NOT NULL);
+CREATE TABLE IF NOT EXISTS bw_events (job_id TEXT NOT NULL REFERENCES bw_jobs(id) ON DELETE CASCADE, seq INTEGER NOT NULL, body JSON NOT NULL, PRIMARY KEY(job_id, seq));
+CREATE TABLE IF NOT EXISTS bw_chunks (id TEXT NOT NULL, space TEXT NOT NULL, product_id TEXT NOT NULL, source_type TEXT NOT NULL, body JSON NOT NULL, saved_at DOUBLE PRECISION NOT NULL, PRIMARY KEY(id, space));
+CREATE INDEX IF NOT EXISTS bw_chunks_product ON bw_chunks(space, product_id);
+CREATE TABLE IF NOT EXISTS bw_limits (bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, expires DOUBLE PRECISION NOT NULL);
+INSERT INTO bw_migrations(version) VALUES (1) ON CONFLICT(version) DO NOTHING;
