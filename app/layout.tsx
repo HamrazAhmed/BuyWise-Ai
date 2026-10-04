@@ -1,35 +1,24 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import localFont from 'next/font/local'
 import './globals.css'
+
+const sans = localFont({ src: './fonts/UbuntuSans.woff2', variable: '--font-buywise-sans', weight: '100 900', display: 'swap' })
+const editorial = localFont({ src: './fonts/NotoSerif.woff2', variable: '--font-editorial', weight: '400', display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'BuyWise AI — Evidence-backed purchase decisions',
-  description: 'Your AI-powered purchase decision engine. Compare products against your priorities with transparent evidence.',
-  generator: 'v0.app',
+  description: 'Research your next purchase. Compare laptops against your priorities, with source-backed facts and clear trade-offs.',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: [{ url: '/buywise-icon.svg', type: 'image/svg+xml' }],
   },
 }
 
 export const viewport: Viewport = {
   colorScheme: 'light dark',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: 'white' },
-    { media: '(prefers-color-scheme: dark)', color: 'black' },
+    { media: '(prefers-color-scheme: light)', color: '#f5f4ee' },
+    { media: '(prefers-color-scheme: dark)', color: '#18231e' },
   ],
 }
 
@@ -40,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className={`${sans.variable} ${editorial.variable} antialiased`}>
         {children}
         {process.env.VERCEL === '1' && <Analytics />}
       </body>
